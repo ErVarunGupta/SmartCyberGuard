@@ -14,9 +14,12 @@ def collect_system_metrics():
     disk = psutil.disk_usage('/').percent
 
     disk_io = psutil.disk_io_counters()
-    battery = psutil.sensors_battery()
+    try:
+        battery = psutil.sensors_battery()
+        battery_pct = battery.percent if battery else 0
+    except (FileNotFoundError, NotImplementedError):
+        battery_pct = 0
 
-    battery_pct = battery.percent if battery else -1
     process_count = len(list(psutil.process_iter()))
 
     return {
