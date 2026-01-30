@@ -1,45 +1,9 @@
-
-# ===============================
-# CORE SYSTEM MONITORING
-# ===============================
-psutil
-
-# ===============================
-# DATA & ML
-# ===============================
-numpy
-pandas
-scikit-learn
-joblib
-
-# ===============================
-# DASHBOARD / UI
-# ===============================
 streamlit
 streamlit-autorefresh
-
-# ===============================
-# NETWORK / IDS
-# ===============================
-scapy
-
-# ===============================
-# VISUALIZATION (IDS TRAINING)
-# ===============================
+pandas
+numpy
+psutil
+scikit-learn
+joblib
 matplotlib
 seaborn
-
-# ===============================
-# SYSTEM / UTILITIES
-# ===============================
-pywin32>=307
-
-# ===============================
-# OPTIONAL (Tray App – Future)
-# ===============================
-pystray
-Pillow
-
-
-plyer
-pyinstaller
