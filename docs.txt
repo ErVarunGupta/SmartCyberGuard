@@ -1,0 +1,10 @@
+python services\background_monitor.py
+
+cd "D:\AI & ML PROJECTS\smart_laptop_analyzer"
+.\venv\Scripts\Activate
+streamlit run dashboard\app.py
+
+python tools\traffic_generator.py
+
+pyinstaller --onefile --noconsole tray_app.py
+pyinstaller --onefile --noconsole services\ui_launcher.py
