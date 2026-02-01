@@ -1,9 +1,11 @@
+psutil
 streamlit
 streamlit-autorefresh
+scapy
 pandas
 numpy
-psutil
 scikit-learn
 joblib
-matplotlib
-seaborn
+pystray
+pillow
+plyer

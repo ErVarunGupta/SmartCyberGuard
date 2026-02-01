@@ -1,4 +1,7 @@
-from scapy.all import sniff, IP
+import scapy.all as scapy
+
+sniff = scapy.sniff
+IP = scapy.IP
 from core.ids.feature_extractor import extract_features
 from core.ids.ids_engine import predict_attack
 from utils.logger import log_event

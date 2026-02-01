@@ -3,9 +3,25 @@ import pandas as pd
 import os
 from streamlit_autorefresh import st_autorefresh
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# ---------------- PATHS ----------------
+BASE_DIR = os.path.dirname(
+    os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))
+    )
+)
 LOG_FILE = os.path.join(BASE_DIR, "logs", "alerts.log")
 
+
+# ---------------- HELPERS ----------------
+def traffic_type(ip: str) -> str:
+    if not ip:
+        return "UNKNOWN"
+    if ip.startswith(("10.", "172.", "192.168.")):
+        return "SELF"
+    return "EXTERNAL"
+
+
+# ---------------- MAIN VIEW ----------------
 def render_ids_dashboard(refresh_interval=3, reset_logs=False):
 
     st_autorefresh(
@@ -16,6 +32,7 @@ def render_ids_dashboard(refresh_interval=3, reset_logs=False):
     st.header("🛡️ Cyber-Guard IDPS Dashboard")
     st.caption("Real-Time Intrusion Detection & Prevention")
 
+    # ---------------- RESET ----------------
     if reset_logs:
         open(LOG_FILE, "w").close()
         st.success("Monitoring reset successfully")
@@ -24,12 +41,12 @@ def render_ids_dashboard(refresh_interval=3, reset_logs=False):
         st.info("No IDS logs found")
         return
 
+    # ---------------- READ LOGS ----------------
     rows = []
 
     with open(LOG_FILE, encoding="utf-8") as f:
         for line in f:
             try:
-                # Only IDS logs
                 if "| IDS |" not in line:
                     continue
 
@@ -49,10 +66,20 @@ def render_ids_dashboard(refresh_interval=3, reset_logs=False):
 
                 rows.append([time, label, src_ip, action])
 
-            except:
+            except Exception:
                 pass
 
-    df = pd.DataFrame(rows, columns=["time", "label", "src_ip", "action"])
+    df = pd.DataFrame(
+        rows,
+        columns=["time", "label", "src_ip", "action"]
+    )
+
+    if df.empty:
+        st.info("No IDS events yet")
+        return
+
+    # ---------------- ADD TRAFFIC TYPE ----------------
+    df["traffic_type"] = df["src_ip"].apply(traffic_type)
 
     # ---------------- METRICS ----------------
     c1, c2, c3, c4 = st.columns(4)
@@ -74,18 +101,26 @@ def render_ids_dashboard(refresh_interval=3, reset_logs=False):
         df.src_ip.nunique()
     )
 
+    # ---------------- INFO BADGE ----------------
+    st.caption(
+        "🟢 SELF = Traffic from your own system / LAN | "
+        "🔴 EXTERNAL = Outside network traffic"
+    )
 
+    # ---------------- LIVE EVENTS ----------------
     st.subheader("🚨 Live Events")
 
     def highlight(row):
         if row["action"] == "BLOCKED":
-            return ["background-color:#ff4b4b"] * 4
+            return ["background-color:#ff4b4b"] * len(row)
         if row["label"] != "normal":
-            return ["background-color:#ffcccc"] * 4
-        return [""] * 4
+            return ["background-color:#ffcccc"] * len(row)
+        return [""] * len(row)
 
     st.dataframe(
-        df.tail(50).style.apply(highlight, axis=1),
+        df.tail(50)[
+            ["time", "label", "src_ip", "traffic_type", "action"]
+        ].style.apply(highlight, axis=1),
         use_container_width=True,
         height=450
     )

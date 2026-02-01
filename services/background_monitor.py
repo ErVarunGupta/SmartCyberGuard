@@ -1,47 +1,86 @@
 # services/background_monitor.py
-import pandas as pd
-import time
-import joblib
+# --------------------------------
+# SmartCyberGuard Background Agent
+# --------------------------------
+
+# ===== DISABLE PYARROW IN PANDAS (CRITICAL FIX) =====
 import os
+os.environ["PANDAS_DISABLE_ARROW"] = "1"
+
+# ===== SINGLE INSTANCE (WINDOWS KERNEL MUTEX via ctypes) =====
 import sys
+import ctypes
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, BASE_DIR)
+kernel32 = ctypes.windll.kernel32
 
+mutex = kernel32.CreateMutexW(
+    None,
+    True,   # initial owner
+    "SmartCyberGuard_BackgroundMonitor"
+)
+
+ERROR_ALREADY_EXISTS = 183
+
+if kernel32.GetLastError() == ERROR_ALREADY_EXISTS:
+    sys.exit(0)
+
+# ===== STANDARD IMPORTS =====
+import time
+import threading
+import pandas as pd
+import joblib
+
+# ===== PATH HANDLING (SOURCE + PYINSTALLER) =====
+if hasattr(sys, "_MEIPASS"):
+    BASE_DIR = sys._MEIPASS
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+# ===== PROJECT IMPORTS =====
 from core.monitor import collect_system_metrics
 from core.predictor import predict_system_state
+from core.ids.network_sniffer import start_sniffing
 from utils.logger import log_alert
 
-# -------------------------------
-# LOAD ML MODEL (SAFE)
-# -------------------------------
-MODEL_PATH = os.path.join(BASE_DIR, "models", "model.pkl")
+# ===== RESOURCE PATH HELPER =====
+def resource_path(relative_path: str) -> str:
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(BASE_DIR, relative_path)
 
+# ===== LOAD ML MODEL (FAIL-SAFE) =====
 model = None
 try:
-    model = joblib.load(MODEL_PATH)
-    print("✅ ML model loaded")
-except Exception:
-    print("⚠️ ML model not available, using rule-based mode")
+    model = joblib.load(resource_path("models/model.pkl"))
+    log_alert(
+        alert_type="MODEL_LOADED",
+        source="AGENT",
+        extra_info="ML model loaded successfully"
+    )
+except Exception as e:
+    log_alert(
+        alert_type="MODEL_FALLBACK",
+        source="AGENT",
+        extra_info=str(e)
+    )
 
-print("🚀 Unified Background Agent started")
-
-# -------------------------------
-# START IDS ENGINE
-# -------------------------------
-from core.ids.network_sniffer import start_sniffing
-import threading
-
-ids_thread = threading.Thread(target=start_sniffing, daemon=True)
+# ===== START IDS ENGINE (DAEMON THREAD) =====
+ids_thread = threading.Thread(
+    target=start_sniffing,
+    daemon=True
+)
 ids_thread.start()
 
-print("🛡️ IDS engine started")
+log_alert(
+    alert_type="IDS_STARTED",
+    source="AGENT",
+    extra_info="IDS engine running"
+)
 
-# -------------------------------
-# SYSTEM PERFORMANCE MONITOR LOOP
-# -------------------------------
-print("🟢 System performance monitor started")
-
+# ===== MAIN BACKGROUND LOOP (NEVER EXIT) =====
 while True:
     try:
         metrics = collect_system_metrics()
@@ -58,8 +97,7 @@ while True:
 
         pred, ml_available = predict_system_state(model, features_df)
 
-
-        # 2 = Hang Risk
+        # 2 = HANG RISK
         if pred == 2:
             log_alert(
                 alert_type="HANG_RISK",
@@ -74,5 +112,9 @@ while True:
         time.sleep(5)
 
     except Exception as e:
-        print("⚠️ System monitor error:", e)
+        log_alert(
+            alert_type="AGENT_ERROR",
+            source="AGENT",
+            extra_info=str(e)
+        )
         time.sleep(5)

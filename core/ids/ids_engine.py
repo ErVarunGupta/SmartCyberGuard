@@ -1,6 +1,8 @@
 import os
 import joblib
 import pandas as pd
+import sys
+# from skops.io import load
 
 from schema.feature_schema import FEATURE_ORDER
 from core.ids.rule_engine import rule_based_detection
@@ -14,8 +16,21 @@ PROJECT_ROOT = os.path.dirname(
 
 BASE_DIR = os.path.join(PROJECT_ROOT, "models")
 
-model = joblib.load(os.path.join(BASE_DIR, "rf_model.pkl"))
-scaler = joblib.load(os.path.join(BASE_DIR, "scaler.pkl"))
+# model = joblib.load(os.path.join(BASE_DIR, "rf_model.pkl"))
+
+def resource_path(relative_path):
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
+model = joblib.load(resource_path("models/rf_model.pkl"))
+scaler = joblib.load(resource_path("models/scaler.pkl"))
+
+# model = load(resource_path("models/rf_model.skops"), trusted=True)
+# scaler = load(resource_path("models/scaler.skops"), trusted=True)
+
+
+# scaler = joblib.load(os.path.join(BASE_DIR, "scaler.pkl"))
 
 # Map ML output to labels
 LABEL_MAP = {

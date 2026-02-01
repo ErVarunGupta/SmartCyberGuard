@@ -3,46 +3,43 @@ import os
 import winsound
 from plyer import notification
 
-LOG_FILE = "logs/alerts.log"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LOG_FILE = os.path.join(BASE_DIR, "logs", "alerts.log")
 
-CRITICAL_ALERT_KEYWORDS = [
-    "HANG",
-    "HANG_RISK",
-    "INTRUSION",
-    "DOS",
-    "ATTACK",
-    "BLOCKED"
-]
 
-def is_critical_alert(log_line: str) -> bool:
-    log_upper = log_line.upper()
-    return any(keyword in log_upper for keyword in CRITICAL_ALERT_KEYWORDS)
+def beep():
+    winsound.Beep(2000, 400)
+    winsound.Beep(1800, 300)
 
-def notify(alert_text: str):
-    # Beep (short & sharp)
-    winsound.Beep(1500, 700)
 
-    # Desktop popup
+def notify(msg):
     notification.notify(
-        title="🚨 Smart Laptop Analyzer Alert",
-        message=alert_text,
-        timeout=6
+        title="🚨 Smart Cyber Guard Alert",
+        message=msg,
+        timeout=5
     )
+    beep()
+
 
 def watch_alerts():
     if not os.path.exists(LOG_FILE):
         return
 
-    with open(LOG_FILE, "r") as f:
+    with open(LOG_FILE, "r", encoding="utf-8") as f:
         f.seek(0, os.SEEK_END)
 
         while True:
             line = f.readline()
-            if line:
-                if is_critical_alert(line):
-                    notify(line.strip())
-            else:
-                time.sleep(1)
+            if not line:
+                time.sleep(0.5)
+                continue
+
+            line_lower = line.lower()
+
+            # 🔥 robust trigger
+            if "possible_dos" in line_lower or "hang_risk" in line_lower:
+                notify(line.strip())
+
 
 if __name__ == "__main__":
     watch_alerts()

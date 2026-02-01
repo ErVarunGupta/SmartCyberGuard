@@ -3,27 +3,43 @@ from pystray import MenuItem as item
 from PIL import Image
 import subprocess
 import os
-import time
-import webbrowser
+import sys
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+PYTHONW = os.path.join(ROOT, "venv", "Scripts", "pythonw.exe")
+PYTHON = os.path.join(ROOT, "venv", "Scripts", "python.exe")
+
+BG_MONITOR = os.path.join(ROOT, "services", "background_monitor.py")
+ALERT = os.path.join(ROOT, "services", "alert_notifier.py")
+APP = os.path.join(ROOT, "app.py")
+ICON = os.path.join(ROOT, "assets", "icon.png")
+
+processes = []
+
+def start_background():
+    processes.append(subprocess.Popen([PYTHONW, BG_MONITOR]))
+    processes.append(subprocess.Popen([PYTHONW, ALERT]))
 
 def open_dashboard():
-    subprocess.Popen([os.path.join(BASE_DIR, "ui_launcher.exe")])
-    time.sleep(3)
-    webbrowser.open("http://localhost:8501")
+    subprocess.Popen([PYTHON, "-m", "streamlit", "run", APP])
 
 def exit_app(icon, item):
+    for p in processes:
+        p.kill()
     icon.stop()
+    sys.exit()
 
-icon = pystray.Icon(
-    "SmartCyberGuard",
-    Image.new("RGB", (64, 64), "blue"),
-    "SmartCyberGuard",
-    menu=(
+def setup_tray():
+    image = Image.open(ICON)
+    menu = (
         item("📊 Open Dashboard", open_dashboard),
         item("❌ Exit", exit_app),
     )
-)
 
-icon.run()
+    icon = pystray.Icon("SmartCyberGuard", image, "Smart Cyber Guard", menu)
+    start_background()
+    icon.run()
+
+if __name__ == "__main__":
+    setup_tray()
