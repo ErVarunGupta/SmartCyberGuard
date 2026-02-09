@@ -1,45 +1,56 @@
-import time
 import os
+import sys
+import time
 import winsound
 from plyer import notification
 
+# -------------------------------------------------
+# ADD PROJECT ROOT TO PATH
+# -------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOG_FILE = os.path.join(BASE_DIR, "logs", "alerts.log")
+sys.path.insert(0, BASE_DIR)
 
+from utils.logger import read_latest_alert
 
-def beep():
-    winsound.Beep(2000, 400)
-    winsound.Beep(1800, 300)
+SEEN = set()
 
-
-def notify(msg):
+def notify(alert: str):
+    winsound.Beep(1200, 600)
     notification.notify(
-        title="🚨 Smart Cyber Guard Alert",
-        message=msg,
-        timeout=5
+        title="🛡 SmartCyberGuard Alert",
+        message=alert,
+        timeout=6
     )
-    beep()
 
+print("🔔 Alert notifier started (listening for REAL threats only)")
 
-def watch_alerts():
-    if not os.path.exists(LOG_FILE):
-        return
+while True:
+    alert = read_latest_alert()
 
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
-        f.seek(0, os.SEEK_END)
+    if not alert:
+        time.sleep(2)
+        continue
 
-        while True:
-            line = f.readline()
-            if not line:
-                time.sleep(0.5)
-                continue
+    if alert in SEEN:
+        time.sleep(2)
+        continue
 
-            line_lower = line.lower()
+    alert_lower = alert.lower()
 
-            # 🔥 robust trigger
-            if "possible_dos" in line_lower or "hang_risk" in line_lower:
-                notify(line.strip())
+    # ❌ Ignore normal traffic
+    if "normal" in alert_lower:
+        SEEN.add(alert)
+        time.sleep(2)
+        continue
 
+    # ❌ Ignore self traffic
+    if "src_ip=10." in alert_lower or "src_ip=192.168." in alert_lower:
+        SEEN.add(alert)
+        time.sleep(2)
+        continue
 
-if __name__ == "__main__":
-    watch_alerts()
+    # ✅ REAL ALERT
+    notify(alert)
+    SEEN.add(alert)
+
+    time.sleep(2)

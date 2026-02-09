@@ -77,54 +77,28 @@ elif active_tab == "🛡️ Intrusion Detection":
 
 
 ================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\background_monitor.spec
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\docs.txt
 ================================================================================
 
-# -*- mode: python ; coding: utf-8 -*-
+python -m venv venv
+
+venv\Scripts\activate
+
+python -m pip install --upgrade pip
+
+pip install -r requirements.txt
+
+python services\background_monitor.py
+python services\alert_notifier.py
+streamlit run app.py
+
+🧊 PHASE 4 — Build executables (ONE command)
+pyinstaller background_monitor.spec
 
 
-a = Analysis(
-    ['services\\background_monitor.py'],
-    pathex=[],
-    binaries=[],
-    datas=[('models', 'models'), ('schema', 'schema'), ('core', 'core'), ('utils', 'utils')],
-    hiddenimports=[],
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
-    noarchive=False,
-    optimize=0,
-)
-pyz = PYZ(a.pure)
+(Optional if you also build UI)
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    [],
-    exclude_binaries=True,
-    name='background_monitor',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-)
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='background_monitor',
-)
-
+pyinstaller ui_launcher.spec
 
 
 ================================================================================
@@ -195,181 +169,6 @@ def export_project():
 
 if __name__ == "__main__":
     export_project()
-
-
-================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\ids.py
-================================================================================
-
-# -*- coding: utf-8 -*-
-"""
-Intrusion Detection System - Corrected & Production Ready
-Compatible with latest pandas & sklearn
-"""
-
-import os
-import time
-import joblib
-from skops.io import dump
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# =========================
-# FILE PATHS
-# =========================
-DATA_PATH = "data/kddcup.data_10_percent.gz"
-NAMES_PATH = "data/kddcup.names"
-ATTACK_PATH = "data/training_attack_types"
-
-# =========================
-# LOAD FEATURE NAMES
-# =========================
-with open(NAMES_PATH, "r") as f:
-    print(f.read())
-
-cols = """duration,protocol_type,service,flag,src_bytes,dst_bytes,land,
-wrong_fragment,urgent,hot,num_failed_logins,logged_in,num_compromised,
-root_shell,su_attempted,num_root,num_file_creations,num_shells,
-num_access_files,num_outbound_cmds,is_host_login,is_guest_login,count,
-srv_count,serror_rate,srv_serror_rate,rerror_rate,srv_rerror_rate,
-same_srv_rate,diff_srv_rate,srv_diff_host_rate,dst_host_count,
-dst_host_srv_count,dst_host_same_srv_rate,dst_host_diff_srv_rate,
-dst_host_same_src_port_rate,dst_host_srv_diff_host_rate,
-dst_host_serror_rate,dst_host_srv_serror_rate,dst_host_rerror_rate,
-dst_host_srv_rerror_rate"""
-
-columns = [c.strip() for c in cols.split(",")]
-columns.append("target")
-
-print("Total columns:", len(columns))
-
-# =========================
-# ATTACK MAPPING
-# =========================
-with open(ATTACK_PATH, "r") as f:
-    print(f.read())
-
-attack_map = {
-    "normal": "normal",
-    "back": "dos", "land": "dos", "neptune": "dos", "pod": "dos",
-    "smurf": "dos", "teardrop": "dos",
-    "ipsweep": "probe", "nmap": "probe", "portsweep": "probe", "satan": "probe",
-    "ftp_write": "r2l", "guess_passwd": "r2l", "imap": "r2l",
-    "multihop": "r2l", "phf": "r2l", "spy": "r2l",
-    "warezclient": "r2l", "warezmaster": "r2l",
-    "buffer_overflow": "u2r", "loadmodule": "u2r",
-    "perl": "u2r", "rootkit": "u2r"
-}
-
-# =========================
-# LOAD DATASET (GZIP SAFE)
-# =========================
-df = pd.read_csv(
-    DATA_PATH,
-    names=columns,
-    compression="gzip",
-    header=None
-)
-
-print("Dataset shape:", df.shape)
-
-# =========================
-# TARGET LABEL
-# =========================
-df["Attack Type"] = df["target"].apply(lambda x: attack_map[x.rstrip(".")])
-
-# =========================
-# CLEANING
-# =========================
-df = df.dropna(axis=1)
-df = df.loc[:, df.nunique() > 1]
-
-# =========================
-# CORRELATION (NUMERIC ONLY)
-# =========================
-numeric_df = df.select_dtypes(include=[np.number])
-corr = numeric_df.corr()
-
-plt.figure(figsize=(14, 10))
-sns.heatmap(corr, cmap="coolwarm")
-plt.title("Feature Correlation Heatmap")
-plt.show()
-
-# =========================
-# DROP HIGHLY CORRELATED FEATURES
-# =========================
-drop_cols = [
-    "num_root",
-    "srv_serror_rate",
-    "srv_rerror_rate",
-    "dst_host_srv_serror_rate",
-    "dst_host_serror_rate",
-    "dst_host_rerror_rate",
-    "dst_host_srv_rerror_rate",
-    "dst_host_same_srv_rate"
-]
-
-df.drop(columns=[c for c in drop_cols if c in df.columns], inplace=True)
-
-# =========================
-# ENCODING
-# =========================
-protocol_map = {"icmp": 0, "tcp": 1, "udp": 2}
-flag_map = {
-    "SF": 0, "S0": 1, "REJ": 2, "RSTR": 3, "RSTO": 4,
-    "SH": 5, "S1": 6, "S2": 7, "RSTOS0": 8, "S3": 9, "OTH": 10
-}
-
-df["protocol_type"] = df["protocol_type"].map(protocol_map)
-df["flag"] = df["flag"].map(flag_map)
-
-df.drop(columns=["service", "target"], inplace=True)
-
-# =========================
-# MODELING
-# =========================
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.ensemble import RandomForestClassifier
-
-X = df.drop("Attack Type", axis=1)
-y = df["Attack Type"]
-
-scaler = MinMaxScaler()
-X_scaled = scaler.fit_transform(X)
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X_scaled, y, test_size=0.33, random_state=42
-)
-
-model = RandomForestClassifier(n_estimators=30, random_state=42)
-
-start = time.time()
-model.fit(X_train, y_train)
-print("Training time:", time.time() - start)
-
-print("Train Accuracy:", model.score(X_train, y_train))
-print("Test Accuracy:", model.score(X_test, y_test))
-
-# =========================
-# SAVE MODEL
-# =========================
-os.makedirs("models", exist_ok=True)
-
-joblib.dump(model, "models/rf_model.pkl")
-joblib.dump(scaler, "models/scaler.pkl")
-
-os.makedirs("models", exist_ok=True)
-
-dump(model, "models/rf_model.skops")
-dump(scaler, "models/scaler.skops")
-
-print("✅ Model & Scaler saved using skops")
-
-print("✅ Model & Scaler saved successfully")
-
 
 
 ================================================================================
@@ -412,86 +211,34 @@ plyer
 
 
 ================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\retrain_model.py
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\run_app.py
 ================================================================================
 
-# scripts/retrain_model.py
-
-import pandas as pd
-import joblib
 import os
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+import sys
+import subprocess
 
-# -------------------------------------------------
-# PATHS
-# -------------------------------------------------
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_PATH = os.path.join(BASE_DIR, "data", "system_data_labeled.csv")
-MODEL_PATH = os.path.join(BASE_DIR, "models", "model.pkl")
-BACKUP_MODEL_PATH = os.path.join(BASE_DIR, "models", "model_backup.pkl")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# -------------------------------------------------
-# LOAD DATA
-# -------------------------------------------------
-print("📥 Loading latest dataset...")
-df = pd.read_csv(DATA_PATH)
+def main():
+    app_path = os.path.join("dashboard", "analyzer_app.py")
 
-FEATURES = [
-    "cpu_usage",
-    "ram_usage",
-    "disk_usage",
-    "disk_read",
-    "disk_write",
-    "battery_percent",
-    "process_count",
-    "heavy_process_count"
-]
+    cmd = [
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
+        app_path,
+        "--server.headless=true",
+        "--browser.serverAddress=localhost",
+        "--server.port=8501"
+    ]
 
-TARGET = "label"
+    subprocess.Popen(cmd)
 
-X = df[FEATURES]
-y = df[TARGET]
+if __name__ == "__main__":
+    main()
 
-# -------------------------------------------------
-# TRAIN / TEST SPLIT
-# -------------------------------------------------
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=y
-)
-
-# -------------------------------------------------
-# TRAIN MODEL
-# -------------------------------------------------
-print("🤖 Retraining model...")
-model = RandomForestClassifier(
-    n_estimators=200,
-    random_state=42,
-    n_jobs=-1
-)
-
-model.fit(X_train, y_train)
-
-# -------------------------------------------------
-# EVALUATION
-# -------------------------------------------------
-y_pred = model.predict(X_test)
-acc = accuracy_score(y_test, y_pred)
-
-print(f"🎯 New model accuracy: {acc * 100:.2f}%")
-
-# -------------------------------------------------
-# SAFE REPLACEMENT
-# -------------------------------------------------
-if acc >= 0.85:
-    if os.path.exists(MODEL_PATH):
-        os.replace(MODEL_PATH, BACKUP_MODEL_PATH)
-
-    joblib.dump(model, MODEL_PATH)
-    print("✅ Model updated successfully")
-else:
-    print("❌ Accuracy too low. Model not replaced.")
 
 
 
@@ -499,502 +246,6 @@ else:
 FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\smart_laptop_analyzer_selected_files.txt
 ================================================================================
 
-
-================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\app.py
-================================================================================
-
-import streamlit as st
-import sys
-import os
-
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-
-
-st.set_page_config(
-    page_title="Smart System & Security Monitor",
-    layout="wide"
-)
-
-st.title("🚀 Smart Laptop Analyzer + Cyber Guard")
-
-# -------------------------------------------------
-# GLOBAL SIDEBAR
-# -------------------------------------------------
-st.sidebar.header("⚙️ Controls")
-
-active_tab = st.sidebar.radio(
-    "Select Module",
-    ["💻 System Monitor", "🛡️ Intrusion Detection"]
-)
-
-# Default values
-sys_refresh = None
-ids_refresh = None
-ids_reset = False
-
-# ---------------- SYSTEM MONITOR CONTROLS ----------------
-if active_tab == "💻 System Monitor":
-    st.sidebar.subheader("💻 System Monitor Settings")
-
-    sys_refresh = st.sidebar.slider(
-        "Refresh System Monitor (sec)",
-        min_value=3,
-        max_value=30,
-        value=5,
-        step=1
-    )
-
-# ---------------- IDS CONTROLS ----------------
-elif active_tab == "🛡️ Intrusion Detection":
-    st.sidebar.subheader("🛡️ IDS Settings")
-
-    ids_refresh = st.sidebar.slider(
-        "Refresh IDS Dashboard (sec)",
-        min_value=1,
-        max_value=10,
-        value=3,
-        step=1
-    )
-
-    ids_reset = st.sidebar.button("🔄 Reset Monitoring")
-
-# -------------------------------------------------
-# MAIN CONTENT
-# -------------------------------------------------
-if active_tab == "💻 System Monitor":
-    from dashboard.system_monitor.view import render_system_monitor
-    render_system_monitor(refresh_interval=sys_refresh)
-
-elif active_tab == "🛡️ Intrusion Detection":
-    from dashboard.ids.view import render_ids_dashboard
-    render_ids_dashboard(
-        refresh_interval=ids_refresh,
-        reset_logs=ids_reset
-    )
-
-
-
-================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\background_monitor.spec
-================================================================================
-
-# -*- mode: python ; coding: utf-8 -*-
-
-
-a = Analysis(
-    ['services\\background_monitor.py'],
-    pathex=[],
-    binaries=[],
-    datas=[('models', 'models'), ('schema', 'schema'), ('core', 'core'), ('utils', 'utils')],
-    hiddenimports=[],
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
-    noarchive=False,
-    optimize=0,
-)
-pyz = PYZ(a.pure)
-
-exe = EXE(
-    pyz,
-    a.scripts,
-    [],
-    exclude_binaries=True,
-    name='background_monitor',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-)
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='background_monitor',
-)
-
-
-
-================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\export_project_to_txt.py
-================================================================================
-
-import os
-
-# ========= CONFIG =========
-PROJECT_ROOT = r"D:\AI & ML PROJECTS\smart_laptop_analyzer"
-OUTPUT_FILE = "smart_laptop_analyzer_selected_files.txt"
-
-# folders to skip
-EXCLUDE_DIRS = {
-    "venv",
-    "__pycache__",
-    ".git",
-    ".idea",
-    ".vscode",
-    "build"
-    # NOTE: dist is NOT excluded so .exe can be picked
-}
-
-# allowed file extensions
-INCLUDE_EXTENSIONS = {
-    ".py",
-    ".txt",
-    ".spec"
-}
-# ==========================
-
-def is_included_file(filename):
-    return any(filename.lower().endswith(ext) for ext in INCLUDE_EXTENSIONS)
-
-def export_project():
-    with open(OUTPUT_FILE, "w", encoding="utf-8", errors="ignore") as out:
-        for root, dirs, files in os.walk(PROJECT_ROOT):
-
-            # remove excluded directories
-            dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
-
-            for file in files:
-                if not is_included_file(file):
-                    continue
-
-                file_path = os.path.join(root, file)
-
-                out.write("\n" + "=" * 80 + "\n")
-                out.write(f"FILE PATH: {file_path}\n")
-                out.write("=" * 80 + "\n\n")
-
-                try:
-                    # .exe is binary → don't dump contents
-                    if file.lower().endswith(".exe"):
-                        size_kb = os.path.getsize(file_path) / 1024
-                        out.write(f"[BINARY FILE]\nSize: {size_kb:.2f} KB\n")
-                    else:
-                        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                            out.write(f.read())
-
-                except Exception as e:
-                    out.write(f"[ERROR READING FILE]: {e}")
-
-                out.write("\n\n")
-
-    print("\n✅ Selected files exported successfully!")
-    print(f"📄 Output file: {OUTPUT_FILE}")
-
-if __name__ == "__main__":
-    export_project()
-
-
-================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\ids.py
-================================================================================
-
-# -*- coding: utf-8 -*-
-"""
-Intrusion Detection System - Corrected & Production Ready
-Compatible with latest pandas & sklearn
-"""
-
-import os
-import time
-import joblib
-from skops.io import dump
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# =========================
-# FILE PATHS
-# =========================
-DATA_PATH = "data/kddcup.data_10_percent.gz"
-NAMES_PATH = "data/kddcup.names"
-ATTACK_PATH = "data/training_attack_types"
-
-# =========================
-# LOAD FEATURE NAMES
-# =========================
-with open(NAMES_PATH, "r") as f:
-    print(f.read())
-
-cols = """duration,protocol_type,service,flag,src_bytes,dst_bytes,land,
-wrong_fragment,urgent,hot,num_failed_logins,logged_in,num_compromised,
-root_shell,su_attempted,num_root,num_file_creations,num_shells,
-num_access_files,num_outbound_cmds,is_host_login,is_guest_login,count,
-srv_count,serror_rate,srv_serror_rate,rerror_rate,srv_rerror_rate,
-same_srv_rate,diff_srv_rate,srv_diff_host_rate,dst_host_count,
-dst_host_srv_count,dst_host_same_srv_rate,dst_host_diff_srv_rate,
-dst_host_same_src_port_rate,dst_host_srv_diff_host_rate,
-dst_host_serror_rate,dst_host_srv_serror_rate,dst_host_rerror_rate,
-dst_host_srv_rerror_rate"""
-
-columns = [c.strip() for c in cols.split(",")]
-columns.append("target")
-
-print("Total columns:", len(columns))
-
-# =========================
-# ATTACK MAPPING
-# =========================
-with open(ATTACK_PATH, "r") as f:
-    print(f.read())
-
-attack_map = {
-    "normal": "normal",
-    "back": "dos", "land": "dos", "neptune": "dos", "pod": "dos",
-    "smurf": "dos", "teardrop": "dos",
-    "ipsweep": "probe", "nmap": "probe", "portsweep": "probe", "satan": "probe",
-    "ftp_write": "r2l", "guess_passwd": "r2l", "imap": "r2l",
-    "multihop": "r2l", "phf": "r2l", "spy": "r2l",
-    "warezclient": "r2l", "warezmaster": "r2l",
-    "buffer_overflow": "u2r", "loadmodule": "u2r",
-    "perl": "u2r", "rootkit": "u2r"
-}
-
-# =========================
-# LOAD DATASET (GZIP SAFE)
-# =========================
-df = pd.read_csv(
-    DATA_PATH,
-    names=columns,
-    compression="gzip",
-    header=None
-)
-
-print("Dataset shape:", df.shape)
-
-# =========================
-# TARGET LABEL
-# =========================
-df["Attack Type"] = df["target"].apply(lambda x: attack_map[x.rstrip(".")])
-
-# =========================
-# CLEANING
-# =========================
-df = df.dropna(axis=1)
-df = df.loc[:, df.nunique() > 1]
-
-# =========================
-# CORRELATION (NUMERIC ONLY)
-# =========================
-numeric_df = df.select_dtypes(include=[np.number])
-corr = numeric_df.corr()
-
-plt.figure(figsize=(14, 10))
-sns.heatmap(corr, cmap="coolwarm")
-plt.title("Feature Correlation Heatmap")
-plt.show()
-
-# =========================
-# DROP HIGHLY CORRELATED FEATURES
-# =========================
-drop_cols = [
-    "num_root",
-    "srv_serror_rate",
-    "srv_rerror_rate",
-    "dst_host_srv_serror_rate",
-    "dst_host_serror_rate",
-    "dst_host_rerror_rate",
-    "dst_host_srv_rerror_rate",
-    "dst_host_same_srv_rate"
-]
-
-df.drop(columns=[c for c in drop_cols if c in df.columns], inplace=True)
-
-# =========================
-# ENCODING
-# =========================
-protocol_map = {"icmp": 0, "tcp": 1, "udp": 2}
-flag_map = {
-    "SF": 0, "S0": 1, "REJ": 2, "RSTR": 3, "RSTO": 4,
-    "SH": 5, "S1": 6, "S2": 7, "RSTOS0": 8, "S3": 9, "OTH": 10
-}
-
-df["protocol_type"] = df["protocol_type"].map(protocol_map)
-df["flag"] = df["flag"].map(flag_map)
-
-df.drop(columns=["service", "target"], inplace=True)
-
-# =========================
-# MODELING
-# =========================
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.ensemble import RandomForestClassifier
-
-X = df.drop("Attack Type", axis=1)
-y = df["Attack Type"]
-
-scaler = MinMaxScaler()
-X_scaled = scaler.fit_transform(X)
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X_scaled, y, test_size=0.33, random_state=42
-)
-
-model = RandomForestClassifier(n_estimators=30, random_state=42)
-
-start = time.time()
-model.fit(X_train, y_train)
-print("Training time:", time.time() - start)
-
-print("Train Accuracy:", model.score(X_train, y_train))
-print("Test Accuracy:", model.score(X_test, y_test))
-
-# =========================
-# SAVE MODEL
-# =========================
-os.makedirs("models", exist_ok=True)
-
-joblib.dump(model, "models/rf_model.pkl")
-joblib.dump(scaler, "models/scaler.pkl")
-
-os.makedirs("models", exist_ok=True)
-
-dump(model, "models/rf_model.skops")
-dump(scaler, "models/scaler.skops")
-
-print("✅ Model & Scaler saved using skops")
-
-print("✅ Model & Scaler saved successfully")
-
-
-
-================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\train_model.py
-================================================================================
-
-import pandas as pd
-import os
-import joblib
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-
-# Path handling
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_FILE = os.path.join(BASE_DIR, "data", "system_data_labeled.csv")
-
-# Load dataset
-df = pd.read_csv(DATA_FILE)
-
-# Features and target
-FEATURES = [
-    "cpu_usage",
-    "ram_usage",
-    "disk_usage",
-    "disk_read",
-    "disk_write",
-    "battery_percent",
-    "process_count",
-    "heavy_process_count"
-]
-
-X = df[FEATURES]
-y = df["label"]
-
-# Train-test split (stratified)
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y,
-    test_size=0.2,
-    random_state=42,
-    stratify=y
-)
-
-# Train Random Forest model
-model = RandomForestClassifier(
-    n_estimators=200,
-    max_depth=None,
-    random_state=42,
-    n_jobs=-1
-)
-
-model.fit(X_train, y_train)
-
-# Predictions
-y_pred = model.predict(X_test)
-
-# Evaluation
-accuracy = accuracy_score(y_test, y_pred)
-
-print("✅ Random Forest model trained successfully\n")
-print(f"🎯 Accuracy: {accuracy * 100:.2f}%\n")
-
-print("📊 Classification Report:")
-print(classification_report(y_test, y_pred))
-
-print("🧩 Confusion Matrix:")
-print(confusion_matrix(y_test, y_pred))
-
-
-
-MODEL_PATH = os.path.join(BASE_DIR, "models", "model.pkl")
-joblib.dump(model, MODEL_PATH)
-
-print(f"\n💾 Model saved successfully at: {MODEL_PATH}")
-
-
-================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\ui_launcher.spec
-================================================================================
-
-# -*- mode: python ; coding: utf-8 -*-
-
-
-a = Analysis(
-    ['services\\ui_launcher.py'],
-    pathex=[],
-    binaries=[],
-    datas=[('utils', 'utils'), ('schema', 'schema')],
-    hiddenimports=[],
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
-    noarchive=False,
-    optimize=0,
-)
-pyz = PYZ(a.pure)
-
-exe = EXE(
-    pyz,
-    a.scripts,
-    [],
-    exclude_binaries=True,
-    name='ui_launcher',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-)
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='ui_launcher',
-)
 
 
 
@@ -1245,70 +496,112 @@ def extract_features(packet):
 FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\core\ids\ids_engine.py
 ================================================================================
 
-import os
-import joblib
-import pandas as pd
-import sys
-# from skops.io import load
+# import os
+# import joblib
+# import pandas as pd
+# import sys
+# # from skops.io import load
 
-from schema.feature_schema import FEATURE_ORDER
+# from schema.feature_schema import FEATURE_ORDER
+# from core.ids.rule_engine import rule_based_detection
+
+# # project_root = smart_laptop_analyzer/
+# PROJECT_ROOT = os.path.dirname(
+#     os.path.dirname(
+#         os.path.dirname(os.path.abspath(__file__))
+#     )
+# )
+
+# BASE_DIR = os.path.join(PROJECT_ROOT, "models")
+
+# # model = joblib.load(os.path.join(BASE_DIR, "rf_model.pkl"))
+
+# def resource_path(relative_path):
+#     if hasattr(sys, "_MEIPASS"):
+#         return os.path.join(sys._MEIPASS, relative_path)
+#     return os.path.join(os.path.abspath("."), relative_path)
+
+# model = joblib.load(resource_path("models/rf_model.pkl"))
+# scaler = joblib.load(resource_path("models/scaler.pkl"))
+
+# # model = load(resource_path("models/rf_model.skops"), trusted=True)
+# # scaler = load(resource_path("models/scaler.skops"), trusted=True)
+
+
+# # scaler = joblib.load(os.path.join(BASE_DIR, "scaler.pkl"))
+
+# # Map ML output to labels
+# LABEL_MAP = {
+#     0: "normal",
+#     1: "possible_dos"
+# }
+
+# def predict_attack(features: dict, src_ip: str) -> str:
+#     """
+#     Returns: 'normal' or 'possible_dos'
+#     """
+
+#     # 1️⃣ RULE-BASED DETECTION (FAST + SAFE)
+#     rule_alert = rule_based_detection(features, src_ip)
+#     if rule_alert:
+#         return rule_alert
+
+#     # 2️⃣ ML FALLBACK (SAFE MODE)
+#     try:
+#         row = [features.get(f, 0) for f in FEATURE_ORDER]
+#         df = pd.DataFrame([row], columns=FEATURE_ORDER)
+
+#         df = df.fillna(0)  # safety
+#         scaled = scaler.transform(df)
+
+#         pred = model.predict(scaled)[0]
+#         return LABEL_MAP.get(pred, "normal")
+
+#     except Exception as e:
+#         # NEVER crash real-time IDS
+#         print("[ML ERROR]", e)
+#         return "normal"
+
+
+
+# =========================================
+
+"""
+IDS ENGINE (AGENT VERSION)
+--------------------------
+✔ Rule-based only
+✔ Lightweight
+✔ PyInstaller safe
+✔ No ML / No pandas / No joblib
+"""
+
 from core.ids.rule_engine import rule_based_detection
 
-# project_root = smart_laptop_analyzer/
-PROJECT_ROOT = os.path.dirname(
-    os.path.dirname(
-        os.path.dirname(os.path.abspath(__file__))
-    )
-)
 
-BASE_DIR = os.path.join(PROJECT_ROOT, "models")
-
-# model = joblib.load(os.path.join(BASE_DIR, "rf_model.pkl"))
-
-def resource_path(relative_path):
-    if hasattr(sys, "_MEIPASS"):
-        return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.abspath("."), relative_path)
-
-model = joblib.load(resource_path("models/rf_model.pkl"))
-scaler = joblib.load(resource_path("models/scaler.pkl"))
-
-# model = load(resource_path("models/rf_model.skops"), trusted=True)
-# scaler = load(resource_path("models/scaler.skops"), trusted=True)
-
-
-# scaler = joblib.load(os.path.join(BASE_DIR, "scaler.pkl"))
-
-# Map ML output to labels
 LABEL_MAP = {
     0: "normal",
     1: "possible_dos"
 }
 
+
 def predict_attack(features: dict, src_ip: str) -> str:
     """
+    Agent-safe IDS prediction.
     Returns: 'normal' or 'possible_dos'
     """
 
-    # 1️⃣ RULE-BASED DETECTION (FAST + SAFE)
-    rule_alert = rule_based_detection(features, src_ip)
-    if rule_alert:
-        return rule_alert
-
-    # 2️⃣ ML FALLBACK (SAFE MODE)
     try:
-        row = [features.get(f, 0) for f in FEATURE_ORDER]
-        df = pd.DataFrame([row], columns=FEATURE_ORDER)
+        # 1️⃣ RULE-BASED DETECTION (FAST + SAFE)
+        rule_alert = rule_based_detection(features, src_ip)
+        if rule_alert:
+            return rule_alert
 
-        df = df.fillna(0)  # safety
-        scaled = scaler.transform(df)
-
-        pred = model.predict(scaled)[0]
-        return LABEL_MAP.get(pred, "normal")
+        # 2️⃣ DEFAULT SAFE OUTPUT
+        return "normal"
 
     except Exception as e:
-        # NEVER crash real-time IDS
-        print("[ML ERROR]", e)
+        # NEVER crash background agent
+        print("[IDS RULE ERROR]", e)
         return "normal"
 
 
@@ -1418,6 +711,161 @@ def rule_based_detection(features, src_ip):
 FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\core\ids\__init__.py
 ================================================================================
 
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dashboard\analyzer_app.py
+================================================================================
+
+import os
+import sys
+import time
+import threading
+import streamlit as st
+import pandas as pd
+import joblib
+
+# ===============================
+# PROJECT ROOT (IMPORT SAFE)
+# ===============================
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+# ===============================
+# PROJECT IMPORTS
+# ===============================
+from core.monitor import collect_system_metrics
+from core.ids.network_sniffer import start_sniffing
+from utils.logger import log_alert
+
+# ===============================
+# STREAMLIT CONFIG
+# ===============================
+st.set_page_config(
+    page_title="SmartCyberGuard",
+    layout="wide"
+)
+
+st.title("🛡️ SmartCyberGuard – Laptop Health Analyzer")
+
+# ===============================
+# LOAD ML MODEL (SAFE)
+# ===============================
+MODEL = None
+MODEL_ERROR = None
+
+try:
+    MODEL = joblib.load(os.path.join(PROJECT_ROOT, "models", "model.pkl"))
+except Exception as e:
+    MODEL_ERROR = str(e)
+
+# ===============================
+# SHARED STATE
+# ===============================
+if "ids_started" not in st.session_state:
+    st.session_state.ids_started = False
+
+if "metrics" not in st.session_state:
+    st.session_state.metrics = {}
+
+# ===============================
+# IDS THREAD (START ONCE)
+# ===============================
+def start_ids_once():
+    if not st.session_state.ids_started:
+        t = threading.Thread(target=start_sniffing, daemon=True)
+        t.start()
+        st.session_state.ids_started = True
+        log_alert(
+            alert_type="IDS_STARTED",
+            source="UI",
+            extra_info="IDS thread started from Streamlit"
+        )
+
+start_ids_once()
+
+# ===============================
+# COLLECT METRICS
+# ===============================
+def get_metrics():
+    try:
+        m = collect_system_metrics()
+        return {
+            "cpu_usage": m.get("cpu", 0.0),
+            "ram_usage": m.get("ram", 0.0),
+            "disk_usage": m.get("disk", 0.0),
+            "disk_read": m.get("disk_read", 0),
+            "disk_write": m.get("disk_write", 0),
+            "battery_percent": m.get("battery", 0),
+            "process_count": m.get("process_count", 0),
+            "heavy_process_count": 0  # placeholder (future)
+        }
+    except Exception as e:
+        log_alert(
+            alert_type="METRICS_ERROR",
+            source="UI",
+            extra_info=str(e)
+        )
+        return None
+
+# ===============================
+# UI LOOP (SAFE REFRESH)
+# ===============================
+refresh = st.sidebar.slider(
+    "Refresh interval (seconds)",
+    min_value=2,
+    max_value=10,
+    value=5
+)
+
+placeholder = st.empty()
+
+while True:
+    data = get_metrics()
+
+    with placeholder.container():
+        if not data:
+            st.error("Failed to collect system metrics")
+            time.sleep(refresh)
+            continue
+
+        df = pd.DataFrame([data])
+
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("CPU %", data["cpu_usage"])
+        col2.metric("RAM %", data["ram_usage"])
+        col3.metric("Disk %", data["disk_usage"])
+        col4.metric("Battery %", data["battery_percent"])
+
+        st.subheader("📊 System Metrics")
+        st.dataframe(df, use_container_width=True)
+
+        st.subheader("🧠 ML Prediction")
+
+        if MODEL_ERROR:
+            st.error(f"ML model not loaded: {MODEL_ERROR}")
+        else:
+            try:
+                pred = MODEL.predict(df)[0]
+                state = {
+                    0: "Normal",
+                    1: "High Load",
+                    2: "Hang Risk"
+                }.get(pred, "Unknown")
+
+                if pred == 2:
+                    st.error(f"⚠️ {state}")
+                elif pred == 1:
+                    st.warning(f"⚠️ {state}")
+                else:
+                    st.success(f"✅ {state}")
+
+            except Exception as e:
+                st.error(f"Prediction failed: {e}")
+
+    time.sleep(refresh)
 
 
 
@@ -1926,6 +1374,1276 @@ FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dashboard\system_monitor\__
 
 
 ================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\core\health.py
+================================================================================
+
+# core/health.py
+
+def calculate_health_score(cpu, ram, disk, pred):
+    """
+    Calculates system health score (0–100) and label
+    """
+
+    cpu_score = max(0, 100 - cpu)
+    ram_score = max(0, 100 - ram)
+    disk_score = max(0, 100 - disk)
+
+    # Stability based on prediction
+    if pred == 0:        # Normal
+        stability = 100
+    elif pred == 1:      # High Load
+        stability = 60
+    else:                # Hang Risk
+        stability = 20
+
+    health_score = (
+        cpu_score * 0.35 +
+        ram_score * 0.35 +
+        disk_score * 0.20 +
+        stability * 0.10
+    )
+
+    health_score = round(health_score)
+
+    if health_score >= 80:
+        label = "Excellent 🟢"
+    elif health_score >= 60:
+        label = "Fair 🟡"
+    else:
+        label = "Poor 🔴"
+
+    return health_score, label
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\core\mitigation.py
+================================================================================
+
+# core/mitigation.py
+
+def get_auto_mitigation_suggestions(cpu, ram, disk, pred, battery_pct):
+    suggestions = []
+
+    if ram > 80:
+        suggestions.append(
+            "Close unused browser tabs or restart the browser."
+        )
+
+    if cpu > 75:
+        suggestions.append(
+            "Close background applications or restart heavy apps."
+        )
+
+    if disk > 85:
+        suggestions.append(
+            "Free up disk space or clear temporary files."
+        )
+
+    if pred == 2:
+        suggestions.append(
+            "Save your work immediately and avoid opening new applications."
+        )
+        suggestions.append(
+            "Consider restarting the system to stabilize performance."
+        )
+
+    if battery_pct != -1 and battery_pct < 20:
+        suggestions.append(
+            "Enable power saver mode or plug in the charger."
+        )
+
+    if not suggestions:
+        suggestions.append(
+            "System is stable. No immediate action required."
+        )
+
+    return suggestions
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\core\monitor.py
+================================================================================
+
+# core/monitor.py
+
+import psutil
+import sys
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
+
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+
+def collect_system_metrics():
+    """
+    Collects real-time system metrics
+    Returns a dictionary
+    """
+
+    cpu = psutil.cpu_percent(interval=1)
+    ram = psutil.virtual_memory().percent
+    disk = psutil.disk_usage('/').percent
+
+    disk_io = psutil.disk_io_counters()
+    try:
+        battery = psutil.sensors_battery()
+        battery_pct = battery.percent if battery else 0
+    except (FileNotFoundError, NotImplementedError):
+        battery_pct = 0
+
+    process_count = len(list(psutil.process_iter()))
+
+    return {
+        "cpu": cpu,
+        "ram": ram,
+        "disk": disk,
+        "disk_read": disk_io.read_bytes,
+        "disk_write": disk_io.write_bytes,
+        "battery": battery_pct,
+        "process_count": process_count
+    }
+
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\core\predictor.py
+================================================================================
+
+def predict_system_state(model, features_df):
+    if features_df is None or features_df.empty:
+        return 0, False  # Normal, ML not used
+
+    cpu = features_df["cpu_usage"].iloc[0]
+    ram = features_df["ram_usage"].iloc[0]
+    disk = features_df["disk_usage"].iloc[0]
+
+    # Rule fallback
+    if cpu > 85 and ram > 90:
+        return 2, False
+    if cpu > 70 or ram > 80:
+        return 1, False
+
+    if model is None:
+        return 0, False
+
+    try:
+        pred = model.predict(features_df)[0]
+        return pred, True
+    except Exception:
+        return 0, False
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\core\xai.py
+================================================================================
+
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\core\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\core\ids\feature_extractor.py
+================================================================================
+
+from scapy.all import IP, TCP, UDP
+from schema.feature_schema import encode_protocol, encode_flag
+
+def extract_features(packet):
+    try:
+        ip = packet[IP]
+        src_ip = ip.src
+
+        protocol = "tcp" if TCP in packet else "udp" if UDP in packet else "icmp"
+        flag = "SF"
+
+        features = {
+            "duration": 0,
+            "protocol_type": encode_protocol(protocol),
+            "flag": encode_flag(flag),
+            "src_bytes": len(packet),
+            "dst_bytes": 0,
+            "land": int(ip.src == ip.dst),
+            "wrong_fragment": 0,
+            "urgent": 0,
+            "hot": 0,
+            "num_failed_logins": 0,
+            "logged_in": 0,
+            "num_compromised": 0,
+            "root_shell": 0,
+            "su_attempted": 0,
+            "num_file_creations": 0,
+            "num_shells": 0,
+            "num_access_files": 0,
+            "is_guest_login": 0,
+            "count": 1,
+            "srv_count": 1,
+            "serror_rate": 0.0,
+            "rerror_rate": 0.0,
+            "same_srv_rate": 1.0,
+            "diff_srv_rate": 0.0,
+            "srv_diff_host_rate": 0.0,
+            "dst_host_count": 1,
+            "dst_host_srv_count": 1,
+            "dst_host_diff_srv_rate": 0.0,
+            "dst_host_same_src_port_rate": 1.0,
+            "dst_host_srv_diff_host_rate": 0.0,
+        }
+
+        return src_ip, features
+
+    except Exception:
+        return None, None
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\core\ids\ids_engine.py
+================================================================================
+
+# import os
+# import joblib
+# import pandas as pd
+# import sys
+# # from skops.io import load
+
+# from schema.feature_schema import FEATURE_ORDER
+# from core.ids.rule_engine import rule_based_detection
+
+# # project_root = smart_laptop_analyzer/
+# PROJECT_ROOT = os.path.dirname(
+#     os.path.dirname(
+#         os.path.dirname(os.path.abspath(__file__))
+#     )
+# )
+
+# BASE_DIR = os.path.join(PROJECT_ROOT, "models")
+
+# # model = joblib.load(os.path.join(BASE_DIR, "rf_model.pkl"))
+
+# def resource_path(relative_path):
+#     if hasattr(sys, "_MEIPASS"):
+#         return os.path.join(sys._MEIPASS, relative_path)
+#     return os.path.join(os.path.abspath("."), relative_path)
+
+# model = joblib.load(resource_path("models/rf_model.pkl"))
+# scaler = joblib.load(resource_path("models/scaler.pkl"))
+
+# # model = load(resource_path("models/rf_model.skops"), trusted=True)
+# # scaler = load(resource_path("models/scaler.skops"), trusted=True)
+
+
+# # scaler = joblib.load(os.path.join(BASE_DIR, "scaler.pkl"))
+
+# # Map ML output to labels
+# LABEL_MAP = {
+#     0: "normal",
+#     1: "possible_dos"
+# }
+
+# def predict_attack(features: dict, src_ip: str) -> str:
+#     """
+#     Returns: 'normal' or 'possible_dos'
+#     """
+
+#     # 1️⃣ RULE-BASED DETECTION (FAST + SAFE)
+#     rule_alert = rule_based_detection(features, src_ip)
+#     if rule_alert:
+#         return rule_alert
+
+#     # 2️⃣ ML FALLBACK (SAFE MODE)
+#     try:
+#         row = [features.get(f, 0) for f in FEATURE_ORDER]
+#         df = pd.DataFrame([row], columns=FEATURE_ORDER)
+
+#         df = df.fillna(0)  # safety
+#         scaled = scaler.transform(df)
+
+#         pred = model.predict(scaled)[0]
+#         return LABEL_MAP.get(pred, "normal")
+
+#     except Exception as e:
+#         # NEVER crash real-time IDS
+#         print("[ML ERROR]", e)
+#         return "normal"
+
+
+
+# =========================================
+
+"""
+IDS ENGINE (AGENT VERSION)
+--------------------------
+✔ Rule-based only
+✔ Lightweight
+✔ PyInstaller safe
+✔ No ML / No pandas / No joblib
+"""
+
+from core.ids.rule_engine import rule_based_detection
+
+
+LABEL_MAP = {
+    0: "normal",
+    1: "possible_dos"
+}
+
+
+def predict_attack(features: dict, src_ip: str) -> str:
+    """
+    Agent-safe IDS prediction.
+    Returns: 'normal' or 'possible_dos'
+    """
+
+    try:
+        # 1️⃣ RULE-BASED DETECTION (FAST + SAFE)
+        rule_alert = rule_based_detection(features, src_ip)
+        if rule_alert:
+            return rule_alert
+
+        # 2️⃣ DEFAULT SAFE OUTPUT
+        return "normal"
+
+    except Exception as e:
+        # NEVER crash background agent
+        print("[IDS RULE ERROR]", e)
+        return "normal"
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\core\ids\network_sniffer.py
+================================================================================
+
+import scapy.all as scapy
+
+sniff = scapy.sniff
+IP = scapy.IP
+from core.ids.feature_extractor import extract_features
+from core.ids.ids_engine import predict_attack
+from utils.logger import log_event
+
+def process_packet(packet):
+    if IP in packet:
+        src_ip, features = extract_features(packet)
+
+        if not features:
+            return
+
+        prediction = predict_attack(features, src_ip)
+        log_event(prediction, src_ip)
+
+def start_sniffing(interface=None):
+    print("[*] Starting packet sniffing...")
+    sniff(prn=process_packet, iface=interface, store=False)
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\core\ids\prevention_engine.py
+================================================================================
+
+import subprocess
+import time
+
+BLOCKED_IPS = {}
+BLOCK_DURATION = 60  # seconds
+
+def block_ip(ip):
+    if ip in BLOCKED_IPS:
+        return
+
+    print(f"[IPS] Blocking IP: {ip}")
+
+    cmd = f'netsh advfirewall firewall add rule name="CyberGuard_Block_{ip}" dir=in action=block remoteip={ip}'
+    subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    BLOCKED_IPS[ip] = time.time()
+
+def unblock_expired_ips():
+    now = time.time()
+
+    for ip, ts in list(BLOCKED_IPS.items()):
+        if now - ts > BLOCK_DURATION:
+            print(f"[IPS] Unblocking IP: {ip}")
+            cmd = f'netsh advfirewall firewall delete rule name="CyberGuard_Block_{ip}"'
+            subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            del BLOCKED_IPS[ip]
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\core\ids\rule_engine.py
+================================================================================
+
+import time
+from collections import defaultdict, deque
+
+WINDOW_SECONDS = 5
+THRESHOLD = 15
+
+IP_ACTIVITY = defaultdict(deque)
+LAST_ALERT = {}
+
+TRUSTED_PREFIXES = ("127.", "192.168.")
+
+def is_trusted_ip(ip):
+    return ip.startswith(TRUSTED_PREFIXES)
+
+def rule_based_detection(features, src_ip):
+    if is_trusted_ip(src_ip):
+        return None
+
+    now = time.time()
+    q = IP_ACTIVITY[src_ip]
+
+    q.append(now)
+
+    while q and now - q[0] > WINDOW_SECONDS:
+        q.popleft()
+
+    if len(q) >= THRESHOLD:
+        last = LAST_ALERT.get(src_ip, 0)
+        if now - last > 10:
+            LAST_ALERT[src_ip] = now
+            return "possible_dos"
+
+    return None
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\core\ids\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\dashboard\analyzer_app.py
+================================================================================
+
+import os
+import sys
+import time
+import threading
+import streamlit as st
+import pandas as pd
+import joblib
+
+# ===============================
+# PROJECT ROOT (IMPORT SAFE)
+# ===============================
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+# ===============================
+# PROJECT IMPORTS
+# ===============================
+from core.monitor import collect_system_metrics
+from core.ids.network_sniffer import start_sniffing
+from utils.logger import log_alert
+
+# ===============================
+# STREAMLIT CONFIG
+# ===============================
+st.set_page_config(
+    page_title="SmartCyberGuard",
+    layout="wide"
+)
+
+st.title("🛡️ SmartCyberGuard – Laptop Health Analyzer")
+
+# ===============================
+# LOAD ML MODEL (SAFE)
+# ===============================
+MODEL = None
+MODEL_ERROR = None
+
+try:
+    MODEL = joblib.load(os.path.join(PROJECT_ROOT, "models", "model.pkl"))
+except Exception as e:
+    MODEL_ERROR = str(e)
+
+# ===============================
+# SHARED STATE
+# ===============================
+if "ids_started" not in st.session_state:
+    st.session_state.ids_started = False
+
+if "metrics" not in st.session_state:
+    st.session_state.metrics = {}
+
+# ===============================
+# IDS THREAD (START ONCE)
+# ===============================
+def start_ids_once():
+    if not st.session_state.ids_started:
+        t = threading.Thread(target=start_sniffing, daemon=True)
+        t.start()
+        st.session_state.ids_started = True
+        log_alert(
+            alert_type="IDS_STARTED",
+            source="UI",
+            extra_info="IDS thread started from Streamlit"
+        )
+
+start_ids_once()
+
+# ===============================
+# COLLECT METRICS
+# ===============================
+def get_metrics():
+    try:
+        m = collect_system_metrics()
+        return {
+            "cpu_usage": m.get("cpu", 0.0),
+            "ram_usage": m.get("ram", 0.0),
+            "disk_usage": m.get("disk", 0.0),
+            "disk_read": m.get("disk_read", 0),
+            "disk_write": m.get("disk_write", 0),
+            "battery_percent": m.get("battery", 0),
+            "process_count": m.get("process_count", 0),
+            "heavy_process_count": 0  # placeholder (future)
+        }
+    except Exception as e:
+        log_alert(
+            alert_type="METRICS_ERROR",
+            source="UI",
+            extra_info=str(e)
+        )
+        return None
+
+# ===============================
+# UI LOOP (SAFE REFRESH)
+# ===============================
+refresh = st.sidebar.slider(
+    "Refresh interval (seconds)",
+    min_value=2,
+    max_value=10,
+    value=5
+)
+
+placeholder = st.empty()
+
+while True:
+    data = get_metrics()
+
+    with placeholder.container():
+        if not data:
+            st.error("Failed to collect system metrics")
+            time.sleep(refresh)
+            continue
+
+        df = pd.DataFrame([data])
+
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("CPU %", data["cpu_usage"])
+        col2.metric("RAM %", data["ram_usage"])
+        col3.metric("Disk %", data["disk_usage"])
+        col4.metric("Battery %", data["battery_percent"])
+
+        st.subheader("📊 System Metrics")
+        st.dataframe(df, use_container_width=True)
+
+        st.subheader("🧠 ML Prediction")
+
+        if MODEL_ERROR:
+            st.error(f"ML model not loaded: {MODEL_ERROR}")
+        else:
+            try:
+                pred = MODEL.predict(df)[0]
+                state = {
+                    0: "Normal",
+                    1: "High Load",
+                    2: "Hang Risk"
+                }.get(pred, "Unknown")
+
+                if pred == 2:
+                    st.error(f"⚠️ {state}")
+                elif pred == 1:
+                    st.warning(f"⚠️ {state}")
+                else:
+                    st.success(f"✅ {state}")
+
+            except Exception as e:
+                st.error(f"Prediction failed: {e}")
+
+    time.sleep(refresh)
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\dashboard\components\alerts.py
+================================================================================
+
+import streamlit as st
+
+
+def play_alert_sound():
+    st.markdown(
+        """
+        <audio autoplay>
+            <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
+        </audio>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+def render_alerts(
+    pred,
+    hang_alert_enabled,
+    alert_interval,
+    show_xai=False,
+    xai_explanation=None
+):
+    if pred == 1:
+        st.warning("⚠️ System under high load.")
+
+    elif pred == 2 and hang_alert_enabled and alert_interval > 0:
+        st.error("🚨 HIGH RISK OF SYSTEM HANG!")
+        st.markdown("⏳ **Risk Window:** Next 5–10 minutes")
+        st.toast("Hang risk detected! Save your work.", icon="🚨")
+        play_alert_sound()
+
+        if show_xai and xai_explanation:
+            with st.expander("🧠 Why this was detected?"):
+                for label, percent in xai_explanation:
+                    st.write(f"• **{label}** ({percent}%)")
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\dashboard\components\ids_panel.py
+================================================================================
+
+import streamlit as st
+import pandas as pd
+import os
+
+def render_ids_panel():
+    st.subheader("🛡️ Intrusion Detection System")
+
+    log_file = "logs/ids.log"
+    if not os.path.exists(log_file):
+        st.info("No IDS activity detected yet.")
+        return
+
+    df = pd.read_csv(
+        log_file,
+        sep="|",
+        names=["time","event"],
+        engine="python"
+    )
+
+    alerts = df[df.event.str.contains("ALERT")]
+
+    if alerts.empty:
+        st.success("Network traffic is normal.")
+    else:
+        st.error("⚠️ Intrusion detected!")
+        st.dataframe(alerts.tail(10), use_container_width=True)
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\dashboard\components\metrics.py
+================================================================================
+
+import streamlit as st
+
+
+def render_metrics(cpu, ram, disk, battery):
+    c1, c2, c3, c4 = st.columns(4)
+
+    c1.metric("CPU %", f"{cpu:.1f}")
+    c2.metric("RAM %", f"{ram:.1f}")
+    c3.metric("Disk %", f"{disk:.1f}")
+    c4.metric(
+        "Battery %",
+        f"{battery:.0f}" if battery != -1 else "N/A"
+    )
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\dashboard\components\sidebar.py
+================================================================================
+
+import streamlit as st
+import json
+import os
+
+
+def load_sidebar_settings(settings_path):
+    with open(settings_path, "r") as f:
+        settings = json.load(f)
+
+    st.sidebar.header("⚙️ Alert Settings")
+
+    hang_alert_enabled = st.sidebar.toggle(
+        "Enable Hang Alerts",
+        value=settings["hang_alert_enabled"],
+        key="hang_alert_toggle"
+    )
+
+    alert_interval = st.sidebar.selectbox(
+        "Alert Interval (seconds)",
+        options=[30, 60, 0],
+        index=[30, 60, 0].index(settings["alert_interval"])
+    )
+
+    battery_threshold = st.sidebar.selectbox(
+        "Battery High Threshold (%)",
+        options=[70, 80, 90],
+        index=[70, 80, 90].index(settings["battery_high_threshold"])
+    )
+
+    new_settings = {
+        "hang_alert_enabled": hang_alert_enabled,
+        "alert_interval": alert_interval,
+        "battery_high_threshold": battery_threshold
+    }
+
+    if new_settings != settings:
+        with open(settings_path, "w") as f:
+            json.dump(new_settings, f, indent=2)
+
+    return new_settings
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\dashboard\components\tables.py
+================================================================================
+
+# dashboard/components/tables.py
+
+import streamlit as st
+import psutil
+import pandas as pd
+
+# ---------------- PROCESS → APP NAME MAP ----------------
+PROCESS_APP_MAP = {
+    "chrome.exe": "Google Chrome",
+    "Code.exe": "Visual Studio Code",
+    "python.exe": "Python Application",
+    "msedgewebview2.exe": "Microsoft Edge (Background)",
+    "taskmgr.exe": "Task Manager",
+    "Taskmgr.exe": "Task Manager",
+    "MsMpEng.exe": "Windows Defender",
+    "dwm.exe": "Windows Display Manager",
+    "System Idle Process": "System Idle (CPU Free)",
+    "explorer.exe": "File Explorer"
+}
+
+# -------------------------------------------------------
+def get_top_heavy_processes(limit=5):
+    """
+    Returns DataFrame of top CPU-consuming applications
+    """
+    rows = []
+
+    for proc in psutil.process_iter(
+        ['name', 'cpu_percent', 'memory_percent']
+    ):
+        try:
+            name = proc.info['name']
+            cpu = proc.info['cpu_percent']
+            mem = proc.info['memory_percent']
+
+            if cpu and cpu > 1:
+                app_name = PROCESS_APP_MAP.get(name, name)
+                rows.append([
+                    app_name,
+                    name,
+                    round(cpu, 1),
+                    round(mem, 2)
+                ])
+        except:
+            pass
+
+    df = pd.DataFrame(
+        rows,
+        columns=["Application", "Process", "CPU %", "RAM %"]
+    )
+
+    if df.empty:
+        return df
+
+    return df.sort_values("CPU %", ascending=False).head(limit)
+
+
+# -------------------------------------------------------
+def render_resource_table(df):
+    """
+    Renders top resource consuming apps table
+    """
+    st.subheader("🔥 Top Resource-Consuming Applications")
+
+    if df.empty:
+        st.info("No heavy applications detected.")
+    else:
+        st.dataframe(
+            df,
+            use_container_width=True,
+            hide_index=True
+        )
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\dashboard\ids\view.py
+================================================================================
+
+import streamlit as st
+import pandas as pd
+import os
+from streamlit_autorefresh import st_autorefresh
+
+# ---------------- PATHS ----------------
+BASE_DIR = os.path.dirname(
+    os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))
+    )
+)
+LOG_FILE = os.path.join(BASE_DIR, "logs", "alerts.log")
+
+
+# ---------------- HELPERS ----------------
+def traffic_type(ip: str) -> str:
+    if not ip:
+        return "UNKNOWN"
+    if ip.startswith(("10.", "172.", "192.168.")):
+        return "SELF"
+    return "EXTERNAL"
+
+
+# ---------------- MAIN VIEW ----------------
+def render_ids_dashboard(refresh_interval=3, reset_logs=False):
+
+    st_autorefresh(
+        interval=refresh_interval * 1000,
+        key="ids_refresh"
+    )
+
+    st.header("🛡️ Cyber-Guard IDPS Dashboard")
+    st.caption("Real-Time Intrusion Detection & Prevention")
+
+    # ---------------- RESET ----------------
+    if reset_logs:
+        open(LOG_FILE, "w").close()
+        st.success("Monitoring reset successfully")
+
+    if not os.path.exists(LOG_FILE):
+        st.info("No IDS logs found")
+        return
+
+    # ---------------- READ LOGS ----------------
+    rows = []
+
+    with open(LOG_FILE, encoding="utf-8") as f:
+        for line in f:
+            try:
+                if "| IDS |" not in line:
+                    continue
+
+                parts = [p.strip() for p in line.split("|")]
+
+                time = parts[0]
+                label = parts[2]
+
+                src_ip = ""
+                action = ""
+
+                for p in parts:
+                    if p.startswith("SRC_IP="):
+                        src_ip = p.replace("SRC_IP=", "")
+                    if p.startswith("ACTION="):
+                        action = p.replace("ACTION=", "")
+
+                rows.append([time, label, src_ip, action])
+
+            except Exception:
+                pass
+
+    df = pd.DataFrame(
+        rows,
+        columns=["time", "label", "src_ip", "action"]
+    )
+
+    if df.empty:
+        st.info("No IDS events yet")
+        return
+
+    # ---------------- ADD TRAFFIC TYPE ----------------
+    df["traffic_type"] = df["src_ip"].apply(traffic_type)
+
+    # ---------------- METRICS ----------------
+    c1, c2, c3, c4 = st.columns(4)
+
+    c1.metric("📦 Packets", len(df))
+
+    c2.metric(
+        "⚠️ Alerts",
+        len(df[df.label != "normal"])
+    )
+
+    c3.metric(
+        "⛔ Blocked IPs",
+        df[df.action == "BLOCKED"].src_ip.nunique()
+    )
+
+    c4.metric(
+        "🌍 Unique IPs",
+        df.src_ip.nunique()
+    )
+
+    # ---------------- INFO BADGE ----------------
+    st.caption(
+        "🟢 SELF = Traffic from your own system / LAN | "
+        "🔴 EXTERNAL = Outside network traffic"
+    )
+
+    # ---------------- LIVE EVENTS ----------------
+    st.subheader("🚨 Live Events")
+
+    def highlight(row):
+        if row["action"] == "BLOCKED":
+            return ["background-color:#ff4b4b"] * len(row)
+        if row["label"] != "normal":
+            return ["background-color:#ffcccc"] * len(row)
+        return [""] * len(row)
+
+    st.dataframe(
+        df.tail(50)[
+            ["time", "label", "src_ip", "traffic_type", "action"]
+        ].style.apply(highlight, axis=1),
+        use_container_width=True,
+        height=450
+    )
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\dashboard\ids\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\dashboard\system_monitor\view.py
+================================================================================
+
+import streamlit as st
+import joblib
+import pandas as pd
+import os
+import time
+
+from core.monitor import collect_system_metrics
+from core.predictor import predict_system_state
+from core.health import calculate_health_score
+from core.mitigation import get_auto_mitigation_suggestions
+
+from dashboard.components.metrics import render_metrics
+from dashboard.components.tables import get_top_heavy_processes, render_resource_table
+from dashboard.components.alerts import render_alerts
+from dashboard.components.sidebar import load_sidebar_settings
+from utils.logger import log_alert
+
+# -------------------------------------------------
+# PATHS
+# -------------------------------------------------
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+MODEL_PATH = os.path.join(BASE_DIR, "models", "model.pkl")
+SETTINGS_PATH = os.path.join(BASE_DIR, "config", "settings.json")
+
+LABEL_MAP = {
+    0: "🟢 Normal",
+    1: "🟡 High Load",
+    2: "🔴 Hang Risk"
+}
+
+# -------------------------------------------------
+# MAIN RENDER FUNCTION
+# -------------------------------------------------
+def render_system_monitor(refresh_interval=5):
+
+    st.header("💻 System Performance Monitor")
+
+    # Sidebar settings (already loaded once)
+    settings = load_sidebar_settings(SETTINGS_PATH)
+
+    # Load ML model once
+    model = None
+    try:
+        model = joblib.load(MODEL_PATH)
+    except:
+        st.warning("⚠️ ML model not available, using rule-based prediction")
+
+    # 🔥 IMPORTANT: PLACEHOLDER (NO FLICKER)
+    placeholder = st.empty()
+
+    # -------------------------------------------------
+    # LOOP (CONTROLLED REFRESH)
+    # -------------------------------------------------
+    while True:
+        with placeholder.container():
+
+            # 1️⃣ Collect metrics
+            metrics = collect_system_metrics()
+
+            cpu = metrics["cpu"]
+            ram = metrics["ram"]
+            disk = metrics["disk"]
+            battery = metrics["battery"]
+            process_count = metrics["process_count"]
+
+            # 2️⃣ Heavy processes (ONLY ONCE)
+            heavy_df = get_top_heavy_processes()
+            heavy_process_count = len(heavy_df)
+
+            # 3️⃣ Feature vector
+            features = pd.DataFrame([{
+                "cpu_usage": cpu,
+                "ram_usage": ram,
+                "disk_usage": disk,
+                "disk_read": metrics["disk_read"],
+                "disk_write": metrics["disk_write"],
+                "battery_percent": battery,
+                "process_count": process_count,
+                "heavy_process_count": heavy_process_count
+            }])
+
+            # 4️⃣ Prediction
+            pred, ml_available = predict_system_state(model, features)
+            state = LABEL_MAP[pred]
+
+            # 5️⃣ Health score
+            health_score, health_label = calculate_health_score(
+                cpu, ram, disk, pred
+            )
+
+            # 6️⃣ UI METRICS
+            render_metrics(cpu, ram, disk, battery)
+
+            st.markdown(f"### Current State: **{state}**")
+            st.markdown(
+                f"""
+                ### 🧠 System Health Score  
+                **{health_score}/100 — {health_label}**
+                """
+            )
+
+            # 7️⃣ Alerts
+            render_alerts(
+                pred=pred,
+                hang_alert_enabled=settings["hang_alert_enabled"],
+                alert_interval=settings["alert_interval"],
+                show_xai=False
+            )
+
+            # 8️⃣ Log alerts (background audit)
+            if pred == 2 and settings["hang_alert_enabled"]:
+                log_alert(
+                    alert_type="HANG_RISK",
+                    cpu=cpu,
+                    ram=ram,
+                    disk=disk,
+                    battery=battery,
+                    extra_info="ML" if ml_available else "RULE"
+                )
+
+            # 9️⃣ Recommendations
+            st.subheader("🛠️ Recommended Actions")
+            for s in get_auto_mitigation_suggestions(cpu, ram, disk, pred, battery):
+                st.write(f"• {s}")
+
+            # 🔟 Resource table (ONLY ONE)
+            render_resource_table(heavy_df)
+
+        # ⏱️ CONTROLLED REFRESH (NO PAGE RELOAD)
+        time.sleep(refresh_interval)
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\dashboard\system_monitor\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\schema\feature_schema.py
+================================================================================
+
+FEATURE_ORDER = [
+    'duration','protocol_type','flag','src_bytes','dst_bytes','land',
+    'wrong_fragment','urgent','hot','num_failed_logins','logged_in',
+    'num_compromised','root_shell','su_attempted','num_file_creations',
+    'num_shells','num_access_files','is_guest_login','count','srv_count',
+    'serror_rate','rerror_rate','same_srv_rate','diff_srv_rate',
+    'srv_diff_host_rate','dst_host_count','dst_host_srv_count',
+    'dst_host_diff_srv_rate','dst_host_same_src_port_rate',
+    'dst_host_srv_diff_host_rate'
+]
+
+PROTOCOL_MAP = {"icmp": 0, "tcp": 1, "udp": 2}
+FLAG_MAP = {"SF": 0, "S0": 1, "REJ": 2}
+
+def encode_protocol(p):
+    return PROTOCOL_MAP.get(p, 1)
+
+def encode_flag(f):
+    return FLAG_MAP.get(f, 0)
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\schema\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\utils\agent_logger.py
+================================================================================
+
+import os
+import datetime
+
+LOG_FILE = os.path.join(os.environ.get("TEMP", "."), "smartcyberguard_agent.log")
+
+def log(msg):
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(f"[{datetime.datetime.now()}] {msg}\n")
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\utils\logger.py
+================================================================================
+
+import os
+from datetime import datetime
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+LOG_FILE = os.path.join(LOG_DIR, "alerts.log")
+
+os.makedirs(LOG_DIR, exist_ok=True)
+
+# -------------------------------------------------
+# UNIFIED LOGGER (SYSTEM + IDS)
+# -------------------------------------------------
+def log_alert(
+    alert_type: str,
+    source: str = "SYSTEM",
+    cpu: float = 0.0,
+    ram: float = 0.0,
+    disk: float = 0.0,
+    battery: float = 0.0,
+    src_ip: str | None = None,
+    action: str | None = None,
+    extra_info: str = ""
+):
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    parts = [ts, source, alert_type]
+
+    if source == "SYSTEM":
+        parts.extend([
+            f"CPU={cpu:.1f}%",
+            f"RAM={ram:.1f}%",
+            f"DISK={disk:.1f}%",
+            f"BATTERY={battery:.0f}%"
+        ])
+
+    if src_ip:
+        parts.append(f"SRC_IP={src_ip}")
+
+    if action:
+        parts.append(f"ACTION={action}")
+
+    if extra_info:
+        parts.append(extra_info)
+
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(" | ".join(parts) + "\n")
+
+
+# -------------------------------------------------
+# BACKWARD COMPATIBILITY FOR IDS
+# -------------------------------------------------
+def log_event(label, src_ip, action=None):
+    """
+    IDS legacy wrapper → calls unified logger
+    """
+    log_alert(
+        alert_type=label,
+        source="IDS",
+        src_ip=src_ip,
+        action=action
+    )
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\utils\rules.py
+================================================================================
+
+def rule_based_prediction(cpu, ram, disk):
+    """
+    Rule-based fallback prediction
+    Returns:
+    0 -> Normal
+    1 -> High Load
+    2 -> Hang Risk
+    """
+
+    if cpu > 85 and ram > 85:
+        return 2   # Hang Risk
+
+    if cpu > 65 or ram > 75:
+        return 1   # High Load
+
+    return 0       # Normal
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\utils\sound.py
+================================================================================
+
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\dist\SmartCyberGuard\_internal\utils\__init__.py
+================================================================================
+
+
+
+
+================================================================================
 FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\engine\ids_engine.py
 ================================================================================
 
@@ -1977,6 +2695,339 @@ FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\engine\__init__.py
 
 
 ================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\models_training\ids.py
+================================================================================
+
+# -*- coding: utf-8 -*-
+"""
+Intrusion Detection System - Corrected & Production Ready
+Compatible with latest pandas & sklearn
+"""
+
+import os
+import time
+import joblib
+from skops.io import dump
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# =========================
+# FILE PATHS
+# =========================
+DATA_PATH = "data/kddcup.data_10_percent.gz"
+NAMES_PATH = "data/kddcup.names"
+ATTACK_PATH = "data/training_attack_types"
+
+# =========================
+# LOAD FEATURE NAMES
+# =========================
+with open(NAMES_PATH, "r") as f:
+    print(f.read())
+
+cols = """duration,protocol_type,service,flag,src_bytes,dst_bytes,land,
+wrong_fragment,urgent,hot,num_failed_logins,logged_in,num_compromised,
+root_shell,su_attempted,num_root,num_file_creations,num_shells,
+num_access_files,num_outbound_cmds,is_host_login,is_guest_login,count,
+srv_count,serror_rate,srv_serror_rate,rerror_rate,srv_rerror_rate,
+same_srv_rate,diff_srv_rate,srv_diff_host_rate,dst_host_count,
+dst_host_srv_count,dst_host_same_srv_rate,dst_host_diff_srv_rate,
+dst_host_same_src_port_rate,dst_host_srv_diff_host_rate,
+dst_host_serror_rate,dst_host_srv_serror_rate,dst_host_rerror_rate,
+dst_host_srv_rerror_rate"""
+
+columns = [c.strip() for c in cols.split(",")]
+columns.append("target")
+
+print("Total columns:", len(columns))
+
+# =========================
+# ATTACK MAPPING
+# =========================
+with open(ATTACK_PATH, "r") as f:
+    print(f.read())
+
+attack_map = {
+    "normal": "normal",
+    "back": "dos", "land": "dos", "neptune": "dos", "pod": "dos",
+    "smurf": "dos", "teardrop": "dos",
+    "ipsweep": "probe", "nmap": "probe", "portsweep": "probe", "satan": "probe",
+    "ftp_write": "r2l", "guess_passwd": "r2l", "imap": "r2l",
+    "multihop": "r2l", "phf": "r2l", "spy": "r2l",
+    "warezclient": "r2l", "warezmaster": "r2l",
+    "buffer_overflow": "u2r", "loadmodule": "u2r",
+    "perl": "u2r", "rootkit": "u2r"
+}
+
+# =========================
+# LOAD DATASET (GZIP SAFE)
+# =========================
+df = pd.read_csv(
+    DATA_PATH,
+    names=columns,
+    compression="gzip",
+    header=None
+)
+
+print("Dataset shape:", df.shape)
+
+# =========================
+# TARGET LABEL
+# =========================
+df["Attack Type"] = df["target"].apply(lambda x: attack_map[x.rstrip(".")])
+
+# =========================
+# CLEANING
+# =========================
+df = df.dropna(axis=1)
+df = df.loc[:, df.nunique() > 1]
+
+# =========================
+# CORRELATION (NUMERIC ONLY)
+# =========================
+numeric_df = df.select_dtypes(include=[np.number])
+corr = numeric_df.corr()
+
+plt.figure(figsize=(14, 10))
+sns.heatmap(corr, cmap="coolwarm")
+plt.title("Feature Correlation Heatmap")
+plt.show()
+
+# =========================
+# DROP HIGHLY CORRELATED FEATURES
+# =========================
+drop_cols = [
+    "num_root",
+    "srv_serror_rate",
+    "srv_rerror_rate",
+    "dst_host_srv_serror_rate",
+    "dst_host_serror_rate",
+    "dst_host_rerror_rate",
+    "dst_host_srv_rerror_rate",
+    "dst_host_same_srv_rate"
+]
+
+df.drop(columns=[c for c in drop_cols if c in df.columns], inplace=True)
+
+# =========================
+# ENCODING
+# =========================
+protocol_map = {"icmp": 0, "tcp": 1, "udp": 2}
+flag_map = {
+    "SF": 0, "S0": 1, "REJ": 2, "RSTR": 3, "RSTO": 4,
+    "SH": 5, "S1": 6, "S2": 7, "RSTOS0": 8, "S3": 9, "OTH": 10
+}
+
+df["protocol_type"] = df["protocol_type"].map(protocol_map)
+df["flag"] = df["flag"].map(flag_map)
+
+df.drop(columns=["service", "target"], inplace=True)
+
+# =========================
+# MODELING
+# =========================
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.ensemble import RandomForestClassifier
+
+X = df.drop("Attack Type", axis=1)
+y = df["Attack Type"]
+
+scaler = MinMaxScaler()
+X_scaled = scaler.fit_transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X_scaled, y, test_size=0.33, random_state=42
+)
+
+model = RandomForestClassifier(n_estimators=30, random_state=42)
+
+start = time.time()
+model.fit(X_train, y_train)
+print("Training time:", time.time() - start)
+
+print("Train Accuracy:", model.score(X_train, y_train))
+print("Test Accuracy:", model.score(X_test, y_test))
+
+# =========================
+# SAVE MODEL
+# =========================
+os.makedirs("models", exist_ok=True)
+
+joblib.dump(model, "models/rf_model.pkl")
+joblib.dump(scaler, "models/scaler.pkl")
+
+os.makedirs("models", exist_ok=True)
+
+dump(model, "models/rf_model.skops")
+dump(scaler, "models/scaler.skops")
+
+print("✅ Model & Scaler saved using skops")
+
+print("✅ Model & Scaler saved successfully")
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\models_training\retrain_model.py
+================================================================================
+
+# scripts/retrain_model.py
+
+import pandas as pd
+import joblib
+import os
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+# -------------------------------------------------
+# PATHS
+# -------------------------------------------------
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_PATH = os.path.join(BASE_DIR, "data", "system_data_labeled.csv")
+MODEL_PATH = os.path.join(BASE_DIR, "models", "model.pkl")
+BACKUP_MODEL_PATH = os.path.join(BASE_DIR, "models", "model_backup.pkl")
+
+# -------------------------------------------------
+# LOAD DATA
+# -------------------------------------------------
+print("📥 Loading latest dataset...")
+df = pd.read_csv(DATA_PATH)
+
+FEATURES = [
+    "cpu_usage",
+    "ram_usage",
+    "disk_usage",
+    "disk_read",
+    "disk_write",
+    "battery_percent",
+    "process_count",
+    "heavy_process_count"
+]
+
+TARGET = "label"
+
+X = df[FEATURES]
+y = df[TARGET]
+
+# -------------------------------------------------
+# TRAIN / TEST SPLIT
+# -------------------------------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# -------------------------------------------------
+# TRAIN MODEL
+# -------------------------------------------------
+print("🤖 Retraining model...")
+model = RandomForestClassifier(
+    n_estimators=200,
+    random_state=42,
+    n_jobs=-1
+)
+
+model.fit(X_train, y_train)
+
+# -------------------------------------------------
+# EVALUATION
+# -------------------------------------------------
+y_pred = model.predict(X_test)
+acc = accuracy_score(y_test, y_pred)
+
+print(f"🎯 New model accuracy: {acc * 100:.2f}%")
+
+# -------------------------------------------------
+# SAFE REPLACEMENT
+# -------------------------------------------------
+if acc >= 0.85:
+    if os.path.exists(MODEL_PATH):
+        os.replace(MODEL_PATH, BACKUP_MODEL_PATH)
+
+    joblib.dump(model, MODEL_PATH)
+    print("✅ Model updated successfully")
+else:
+    print("❌ Accuracy too low. Model not replaced.")
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\models_training\train_model.py
+================================================================================
+
+import pandas as pd
+import os
+import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
+# Path handling
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_FILE = os.path.join(BASE_DIR, "data", "system_data_labeled.csv")
+
+# Load dataset
+df = pd.read_csv(DATA_FILE)
+
+# Features and target
+FEATURES = [
+    "cpu_usage",
+    "ram_usage",
+    "disk_usage",
+    "disk_read",
+    "disk_write",
+    "battery_percent",
+    "process_count",
+    "heavy_process_count"
+]
+
+X = df[FEATURES]
+y = df["label"]
+
+# Train-test split (stratified)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
+
+# Train Random Forest model
+model = RandomForestClassifier(
+    n_estimators=200,
+    max_depth=None,
+    random_state=42,
+    n_jobs=-1
+)
+
+model.fit(X_train, y_train)
+
+# Predictions
+y_pred = model.predict(X_test)
+
+# Evaluation
+accuracy = accuracy_score(y_test, y_pred)
+
+print("✅ Random Forest model trained successfully\n")
+print(f"🎯 Accuracy: {accuracy * 100:.2f}%\n")
+
+print("📊 Classification Report:")
+print(classification_report(y_test, y_pred))
+
+print("🧩 Confusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+
+
+
+MODEL_PATH = os.path.join(BASE_DIR, "models", "model.pkl")
+joblib.dump(model, MODEL_PATH)
+
+print(f"\n💾 Model saved successfully at: {MODEL_PATH}")
+
+
+================================================================================
 FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\schema\feature_schema.py
 ================================================================================
 
@@ -2013,51 +3064,62 @@ FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\schema\__init__.py
 FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\services\alert_notifier.py
 ================================================================================
 
-import time
 import os
+import sys
+import time
 import winsound
 from plyer import notification
 
+# -------------------------------------------------
+# ADD PROJECT ROOT TO PATH
+# -------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOG_FILE = os.path.join(BASE_DIR, "logs", "alerts.log")
+sys.path.insert(0, BASE_DIR)
 
+from utils.logger import read_latest_alert
 
-def beep():
-    winsound.Beep(2000, 400)
-    winsound.Beep(1800, 300)
+SEEN = set()
 
-
-def notify(msg):
+def notify(alert: str):
+    winsound.Beep(1200, 600)
     notification.notify(
-        title="🚨 Smart Cyber Guard Alert",
-        message=msg,
-        timeout=5
+        title="🛡 SmartCyberGuard Alert",
+        message=alert,
+        timeout=6
     )
-    beep()
 
+print("🔔 Alert notifier started (listening for REAL threats only)")
 
-def watch_alerts():
-    if not os.path.exists(LOG_FILE):
-        return
+while True:
+    alert = read_latest_alert()
 
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
-        f.seek(0, os.SEEK_END)
+    if not alert:
+        time.sleep(2)
+        continue
 
-        while True:
-            line = f.readline()
-            if not line:
-                time.sleep(0.5)
-                continue
+    if alert in SEEN:
+        time.sleep(2)
+        continue
 
-            line_lower = line.lower()
+    alert_lower = alert.lower()
 
-            # 🔥 robust trigger
-            if "possible_dos" in line_lower or "hang_risk" in line_lower:
-                notify(line.strip())
+    # ❌ Ignore normal traffic
+    if "normal" in alert_lower:
+        SEEN.add(alert)
+        time.sleep(2)
+        continue
 
+    # ❌ Ignore self traffic
+    if "src_ip=10." in alert_lower or "src_ip=192.168." in alert_lower:
+        SEEN.add(alert)
+        time.sleep(2)
+        continue
 
-if __name__ == "__main__":
-    watch_alerts()
+    # ✅ REAL ALERT
+    notify(alert)
+    SEEN.add(alert)
+
+    time.sleep(2)
 
 
 
@@ -2070,10 +3132,6 @@ FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\services\background_monitor
 # SmartCyberGuard Background Agent
 # --------------------------------
 
-# ===== DISABLE PYARROW IN PANDAS (CRITICAL FIX) =====
-import os
-os.environ["PANDAS_DISABLE_ARROW"] = "1"
-
 # ===== SINGLE INSTANCE (WINDOWS KERNEL MUTEX via ctypes) =====
 import sys
 import ctypes
@@ -2082,7 +3140,7 @@ kernel32 = ctypes.windll.kernel32
 
 mutex = kernel32.CreateMutexW(
     None,
-    True,   # initial owner
+    True,   # initial owner (CRITICAL)
     "SmartCyberGuard_BackgroundMonitor"
 )
 
@@ -2092,6 +3150,7 @@ if kernel32.GetLastError() == ERROR_ALREADY_EXISTS:
     sys.exit(0)
 
 # ===== STANDARD IMPORTS =====
+import os
 import time
 import threading
 import pandas as pd
@@ -2238,6 +3297,53 @@ No terminal needed after install.
 
 
 ================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\tests\test_metrics_and_model.py
+================================================================================
+
+import os
+import sys
+
+# ✅ Add project root to PYTHONPATH
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from core.monitor import collect_system_metrics
+import joblib
+import pandas as pd
+
+# Load model
+model = joblib.load("models/model.pkl")
+
+print("Model expects:", model.n_features_in_)
+print("Feature names:", model.feature_names_in_)
+
+# Collect metrics
+metrics = collect_system_metrics()
+print("Raw metrics:", metrics)
+
+# Build feature row (TEMP – just for test)
+row = {
+    "cpu_usage": metrics.get("cpu", 0),
+    "ram_usage": metrics.get("ram", 0),
+    "disk_usage": metrics.get("disk", 0),
+    "disk_read": metrics.get("disk_read", 0),
+    "disk_write": metrics.get("disk_write", 0),
+    "battery_percent": metrics.get("battery", 0),
+    "process_count": metrics.get("process_count", 0),
+    "heavy_process_count": 0  # TEMP placeholder
+}
+
+df = pd.DataFrame([row])
+print("DF columns:", df.columns.tolist())
+
+# Try prediction
+pred = model.predict(df)[0]
+print("Prediction:", pred)
+
+
+
+================================================================================
 FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\tray\tray_app.py
 ================================================================================
 
@@ -2286,6 +3392,21 @@ def setup_tray():
 
 if __name__ == "__main__":
     setup_tray()
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\utils\agent_logger.py
+================================================================================
+
+import os
+import datetime
+
+LOG_FILE = os.path.join(os.environ.get("TEMP", "."), "smartcyberguard_agent.log")
+
+def log(msg):
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(f"[{datetime.datetime.now()}] {msg}\n")
 
 
 
@@ -2342,18 +3463,23 @@ def log_alert(
 
 
 # -------------------------------------------------
-# BACKWARD COMPATIBILITY FOR IDS
+# READ LATEST ALERT (FOR NOTIFIER)
 # -------------------------------------------------
-def log_event(label, src_ip, action=None):
+def read_latest_alert():
     """
-    IDS legacy wrapper → calls unified logger
+    Returns last log line or None
     """
-    log_alert(
-        alert_type=label,
-        source="IDS",
-        src_ip=src_ip,
-        action=action
-    )
+    if not os.path.exists(LOG_FILE):
+        return None
+
+    try:
+        with open(LOG_FILE, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            if not lines:
+                return None
+            return lines[-1].strip()
+    except Exception:
+        return None
 
 
 

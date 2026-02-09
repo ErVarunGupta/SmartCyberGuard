@@ -47,11 +47,33 @@ def log_alert(
 
 
 # -------------------------------------------------
+# READ LATEST ALERT (FOR NOTIFIER)
+# -------------------------------------------------
+def read_latest_alert():
+    """
+    Returns last log line or None
+    """
+    if not os.path.exists(LOG_FILE):
+        return None
+
+    try:
+        with open(LOG_FILE, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            if not lines:
+                return None
+            return lines[-1].strip()
+    except Exception:
+        return None
+
+
+# -------------------------------------------------
 # BACKWARD COMPATIBILITY FOR IDS
 # -------------------------------------------------
-def log_event(label, src_ip, action=None):
+def log_event(label: str, src_ip: str, action: str | None = None):
     """
-    IDS legacy wrapper → calls unified logger
+    Legacy IDS wrapper.
+    IDS code calls log_event(), which internally
+    routes everything to the unified log_alert().
     """
     log_alert(
         alert_type=label,

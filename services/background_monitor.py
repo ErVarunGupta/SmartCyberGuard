@@ -3,10 +3,6 @@
 # SmartCyberGuard Background Agent
 # --------------------------------
 
-# ===== DISABLE PYARROW IN PANDAS (CRITICAL FIX) =====
-import os
-os.environ["PANDAS_DISABLE_ARROW"] = "1"
-
 # ===== SINGLE INSTANCE (WINDOWS KERNEL MUTEX via ctypes) =====
 import sys
 import ctypes
@@ -15,7 +11,7 @@ kernel32 = ctypes.windll.kernel32
 
 mutex = kernel32.CreateMutexW(
     None,
-    True,   # initial owner
+    True,   # initial owner (CRITICAL)
     "SmartCyberGuard_BackgroundMonitor"
 )
 
@@ -25,6 +21,7 @@ if kernel32.GetLastError() == ERROR_ALREADY_EXISTS:
     sys.exit(0)
 
 # ===== STANDARD IMPORTS =====
+import os
 import time
 import threading
 import pandas as pd
