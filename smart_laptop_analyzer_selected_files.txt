@@ -77,54 +77,102 @@ elif active_tab == "🛡️ Intrusion Detection":
 
 
 ================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\background_monitor.spec
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\docs.txt
 ================================================================================
 
-# -*- mode: python ; coding: utf-8 -*-
+python -m venv venv
+
+venv\Scripts\activate
+
+python -m pip install --upgrade pip
+
+pip install -r requirements.txt
+
+python services\background_monitor.py
+
+streamlit run app.py
+
+🧊 PHASE 4 — Build executables (ONE command)
+pyinstaller background_monitor.spec
 
 
-a = Analysis(
-    ['services\\background_monitor.py'],
-    pathex=[],
-    binaries=[],
-    datas=[('models', 'models'), ('schema', 'schema'), ('core', 'core'), ('utils', 'utils')],
-    hiddenimports=[],
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
-    noarchive=False,
-    optimize=0,
-)
-pyz = PYZ(a.pure)
+(Optional if you also build UI)
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    [],
-    exclude_binaries=True,
-    name='background_monitor',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-)
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='background_monitor',
-)
+pyinstaller ui_launcher.spec
 
+
+===========================
+used libraries------------
+===========================
+Python 3.13.3
+altair==6.0.0
+altgraph==0.17.5
+attrs==25.4.0
+blinker==1.9.0
+cachetools==6.2.6
+certifi==2026.1.4
+cffi==2.0.0
+charset-normalizer==3.4.4
+click==8.3.1
+colorama==0.4.6
+contourpy==1.3.3
+cycler==0.12.1
+fonttools==4.61.1
+gitdb==4.0.12
+GitPython==3.1.46
+idna==3.11
+Jinja2==3.1.6
+joblib==1.5.3
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+kiwisolver==1.4.9
+markdown-it-py==4.0.0
+MarkupSafe==3.0.3
+matplotlib==3.10.8
+mdurl==0.1.2
+narwhals==2.15.0
+numpy==2.4.1
+packaging==26.0
+pandas==2.3.3
+pefile==2024.8.26
+pillow==12.1.0
+plyer==2.1.0
+protobuf==6.33.5
+psutil==7.2.2
+pyarrow==23.0.0
+pycparser==3.0
+pydeck==0.9.1
+Pygments==2.19.2
+pyinstaller==6.18.0
+pyinstaller-hooks-contrib==2026.0
+pyparsing==3.3.2
+pystray==0.19.5
+python-dateutil==2.9.0.post0
+pytz==2025.2
+pywin32==311
+pywin32-ctypes==0.2.3
+referencing==0.37.0
+requests==2.32.5
+rich==14.3.1
+rpds-py==0.30.0
+scapy==2.7.0
+scikit-learn==1.8.0
+scipy==1.17.0
+seaborn==0.13.2
+setuptools==80.10.2
+six==1.17.0
+smmap==5.0.2
+sounddevice==0.5.5
+streamlit==1.53.1
+streamlit-autorefresh==1.0.1
+tenacity==9.1.2
+threadpoolctl==3.6.0
+toml==0.10.2
+tornado==6.5.4
+typing_extensions==4.15.0
+tzdata==2025.3
+urllib3==2.6.3
+watchdog==6.0.0
 
 
 ================================================================================
@@ -195,181 +243,6 @@ def export_project():
 
 if __name__ == "__main__":
     export_project()
-
-
-================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\ids.py
-================================================================================
-
-# -*- coding: utf-8 -*-
-"""
-Intrusion Detection System - Corrected & Production Ready
-Compatible with latest pandas & sklearn
-"""
-
-import os
-import time
-import joblib
-from skops.io import dump
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# =========================
-# FILE PATHS
-# =========================
-DATA_PATH = "data/kddcup.data_10_percent.gz"
-NAMES_PATH = "data/kddcup.names"
-ATTACK_PATH = "data/training_attack_types"
-
-# =========================
-# LOAD FEATURE NAMES
-# =========================
-with open(NAMES_PATH, "r") as f:
-    print(f.read())
-
-cols = """duration,protocol_type,service,flag,src_bytes,dst_bytes,land,
-wrong_fragment,urgent,hot,num_failed_logins,logged_in,num_compromised,
-root_shell,su_attempted,num_root,num_file_creations,num_shells,
-num_access_files,num_outbound_cmds,is_host_login,is_guest_login,count,
-srv_count,serror_rate,srv_serror_rate,rerror_rate,srv_rerror_rate,
-same_srv_rate,diff_srv_rate,srv_diff_host_rate,dst_host_count,
-dst_host_srv_count,dst_host_same_srv_rate,dst_host_diff_srv_rate,
-dst_host_same_src_port_rate,dst_host_srv_diff_host_rate,
-dst_host_serror_rate,dst_host_srv_serror_rate,dst_host_rerror_rate,
-dst_host_srv_rerror_rate"""
-
-columns = [c.strip() for c in cols.split(",")]
-columns.append("target")
-
-print("Total columns:", len(columns))
-
-# =========================
-# ATTACK MAPPING
-# =========================
-with open(ATTACK_PATH, "r") as f:
-    print(f.read())
-
-attack_map = {
-    "normal": "normal",
-    "back": "dos", "land": "dos", "neptune": "dos", "pod": "dos",
-    "smurf": "dos", "teardrop": "dos",
-    "ipsweep": "probe", "nmap": "probe", "portsweep": "probe", "satan": "probe",
-    "ftp_write": "r2l", "guess_passwd": "r2l", "imap": "r2l",
-    "multihop": "r2l", "phf": "r2l", "spy": "r2l",
-    "warezclient": "r2l", "warezmaster": "r2l",
-    "buffer_overflow": "u2r", "loadmodule": "u2r",
-    "perl": "u2r", "rootkit": "u2r"
-}
-
-# =========================
-# LOAD DATASET (GZIP SAFE)
-# =========================
-df = pd.read_csv(
-    DATA_PATH,
-    names=columns,
-    compression="gzip",
-    header=None
-)
-
-print("Dataset shape:", df.shape)
-
-# =========================
-# TARGET LABEL
-# =========================
-df["Attack Type"] = df["target"].apply(lambda x: attack_map[x.rstrip(".")])
-
-# =========================
-# CLEANING
-# =========================
-df = df.dropna(axis=1)
-df = df.loc[:, df.nunique() > 1]
-
-# =========================
-# CORRELATION (NUMERIC ONLY)
-# =========================
-numeric_df = df.select_dtypes(include=[np.number])
-corr = numeric_df.corr()
-
-plt.figure(figsize=(14, 10))
-sns.heatmap(corr, cmap="coolwarm")
-plt.title("Feature Correlation Heatmap")
-plt.show()
-
-# =========================
-# DROP HIGHLY CORRELATED FEATURES
-# =========================
-drop_cols = [
-    "num_root",
-    "srv_serror_rate",
-    "srv_rerror_rate",
-    "dst_host_srv_serror_rate",
-    "dst_host_serror_rate",
-    "dst_host_rerror_rate",
-    "dst_host_srv_rerror_rate",
-    "dst_host_same_srv_rate"
-]
-
-df.drop(columns=[c for c in drop_cols if c in df.columns], inplace=True)
-
-# =========================
-# ENCODING
-# =========================
-protocol_map = {"icmp": 0, "tcp": 1, "udp": 2}
-flag_map = {
-    "SF": 0, "S0": 1, "REJ": 2, "RSTR": 3, "RSTO": 4,
-    "SH": 5, "S1": 6, "S2": 7, "RSTOS0": 8, "S3": 9, "OTH": 10
-}
-
-df["protocol_type"] = df["protocol_type"].map(protocol_map)
-df["flag"] = df["flag"].map(flag_map)
-
-df.drop(columns=["service", "target"], inplace=True)
-
-# =========================
-# MODELING
-# =========================
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.ensemble import RandomForestClassifier
-
-X = df.drop("Attack Type", axis=1)
-y = df["Attack Type"]
-
-scaler = MinMaxScaler()
-X_scaled = scaler.fit_transform(X)
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X_scaled, y, test_size=0.33, random_state=42
-)
-
-model = RandomForestClassifier(n_estimators=30, random_state=42)
-
-start = time.time()
-model.fit(X_train, y_train)
-print("Training time:", time.time() - start)
-
-print("Train Accuracy:", model.score(X_train, y_train))
-print("Test Accuracy:", model.score(X_test, y_test))
-
-# =========================
-# SAVE MODEL
-# =========================
-os.makedirs("models", exist_ok=True)
-
-joblib.dump(model, "models/rf_model.pkl")
-joblib.dump(scaler, "models/scaler.pkl")
-
-os.makedirs("models", exist_ok=True)
-
-dump(model, "models/rf_model.skops")
-dump(scaler, "models/scaler.skops")
-
-print("✅ Model & Scaler saved using skops")
-
-print("✅ Model & Scaler saved successfully")
-
 
 
 ================================================================================
@@ -412,589 +285,9 @@ plyer
 
 
 ================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\retrain_model.py
-================================================================================
-
-# scripts/retrain_model.py
-
-import pandas as pd
-import joblib
-import os
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-
-# -------------------------------------------------
-# PATHS
-# -------------------------------------------------
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_PATH = os.path.join(BASE_DIR, "data", "system_data_labeled.csv")
-MODEL_PATH = os.path.join(BASE_DIR, "models", "model.pkl")
-BACKUP_MODEL_PATH = os.path.join(BASE_DIR, "models", "model_backup.pkl")
-
-# -------------------------------------------------
-# LOAD DATA
-# -------------------------------------------------
-print("📥 Loading latest dataset...")
-df = pd.read_csv(DATA_PATH)
-
-FEATURES = [
-    "cpu_usage",
-    "ram_usage",
-    "disk_usage",
-    "disk_read",
-    "disk_write",
-    "battery_percent",
-    "process_count",
-    "heavy_process_count"
-]
-
-TARGET = "label"
-
-X = df[FEATURES]
-y = df[TARGET]
-
-# -------------------------------------------------
-# TRAIN / TEST SPLIT
-# -------------------------------------------------
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=y
-)
-
-# -------------------------------------------------
-# TRAIN MODEL
-# -------------------------------------------------
-print("🤖 Retraining model...")
-model = RandomForestClassifier(
-    n_estimators=200,
-    random_state=42,
-    n_jobs=-1
-)
-
-model.fit(X_train, y_train)
-
-# -------------------------------------------------
-# EVALUATION
-# -------------------------------------------------
-y_pred = model.predict(X_test)
-acc = accuracy_score(y_test, y_pred)
-
-print(f"🎯 New model accuracy: {acc * 100:.2f}%")
-
-# -------------------------------------------------
-# SAFE REPLACEMENT
-# -------------------------------------------------
-if acc >= 0.85:
-    if os.path.exists(MODEL_PATH):
-        os.replace(MODEL_PATH, BACKUP_MODEL_PATH)
-
-    joblib.dump(model, MODEL_PATH)
-    print("✅ Model updated successfully")
-else:
-    print("❌ Accuracy too low. Model not replaced.")
-
-
-
-================================================================================
 FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\smart_laptop_analyzer_selected_files.txt
 ================================================================================
 
-
-================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\app.py
-================================================================================
-
-import streamlit as st
-import sys
-import os
-
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-
-
-st.set_page_config(
-    page_title="Smart System & Security Monitor",
-    layout="wide"
-)
-
-st.title("🚀 Smart Laptop Analyzer + Cyber Guard")
-
-# -------------------------------------------------
-# GLOBAL SIDEBAR
-# -------------------------------------------------
-st.sidebar.header("⚙️ Controls")
-
-active_tab = st.sidebar.radio(
-    "Select Module",
-    ["💻 System Monitor", "🛡️ Intrusion Detection"]
-)
-
-# Default values
-sys_refresh = None
-ids_refresh = None
-ids_reset = False
-
-# ---------------- SYSTEM MONITOR CONTROLS ----------------
-if active_tab == "💻 System Monitor":
-    st.sidebar.subheader("💻 System Monitor Settings")
-
-    sys_refresh = st.sidebar.slider(
-        "Refresh System Monitor (sec)",
-        min_value=3,
-        max_value=30,
-        value=5,
-        step=1
-    )
-
-# ---------------- IDS CONTROLS ----------------
-elif active_tab == "🛡️ Intrusion Detection":
-    st.sidebar.subheader("🛡️ IDS Settings")
-
-    ids_refresh = st.sidebar.slider(
-        "Refresh IDS Dashboard (sec)",
-        min_value=1,
-        max_value=10,
-        value=3,
-        step=1
-    )
-
-    ids_reset = st.sidebar.button("🔄 Reset Monitoring")
-
-# -------------------------------------------------
-# MAIN CONTENT
-# -------------------------------------------------
-if active_tab == "💻 System Monitor":
-    from dashboard.system_monitor.view import render_system_monitor
-    render_system_monitor(refresh_interval=sys_refresh)
-
-elif active_tab == "🛡️ Intrusion Detection":
-    from dashboard.ids.view import render_ids_dashboard
-    render_ids_dashboard(
-        refresh_interval=ids_refresh,
-        reset_logs=ids_reset
-    )
-
-
-
-================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\background_monitor.spec
-================================================================================
-
-# -*- mode: python ; coding: utf-8 -*-
-
-
-a = Analysis(
-    ['services\\background_monitor.py'],
-    pathex=[],
-    binaries=[],
-    datas=[('models', 'models'), ('schema', 'schema'), ('core', 'core'), ('utils', 'utils')],
-    hiddenimports=[],
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
-    noarchive=False,
-    optimize=0,
-)
-pyz = PYZ(a.pure)
-
-exe = EXE(
-    pyz,
-    a.scripts,
-    [],
-    exclude_binaries=True,
-    name='background_monitor',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-)
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='background_monitor',
-)
-
-
-
-================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\export_project_to_txt.py
-================================================================================
-
-import os
-
-# ========= CONFIG =========
-PROJECT_ROOT = r"D:\AI & ML PROJECTS\smart_laptop_analyzer"
-OUTPUT_FILE = "smart_laptop_analyzer_selected_files.txt"
-
-# folders to skip
-EXCLUDE_DIRS = {
-    "venv",
-    "__pycache__",
-    ".git",
-    ".idea",
-    ".vscode",
-    "build"
-    # NOTE: dist is NOT excluded so .exe can be picked
-}
-
-# allowed file extensions
-INCLUDE_EXTENSIONS = {
-    ".py",
-    ".txt",
-    ".spec"
-}
-# ==========================
-
-def is_included_file(filename):
-    return any(filename.lower().endswith(ext) for ext in INCLUDE_EXTENSIONS)
-
-def export_project():
-    with open(OUTPUT_FILE, "w", encoding="utf-8", errors="ignore") as out:
-        for root, dirs, files in os.walk(PROJECT_ROOT):
-
-            # remove excluded directories
-            dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
-
-            for file in files:
-                if not is_included_file(file):
-                    continue
-
-                file_path = os.path.join(root, file)
-
-                out.write("\n" + "=" * 80 + "\n")
-                out.write(f"FILE PATH: {file_path}\n")
-                out.write("=" * 80 + "\n\n")
-
-                try:
-                    # .exe is binary → don't dump contents
-                    if file.lower().endswith(".exe"):
-                        size_kb = os.path.getsize(file_path) / 1024
-                        out.write(f"[BINARY FILE]\nSize: {size_kb:.2f} KB\n")
-                    else:
-                        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                            out.write(f.read())
-
-                except Exception as e:
-                    out.write(f"[ERROR READING FILE]: {e}")
-
-                out.write("\n\n")
-
-    print("\n✅ Selected files exported successfully!")
-    print(f"📄 Output file: {OUTPUT_FILE}")
-
-if __name__ == "__main__":
-    export_project()
-
-
-================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\ids.py
-================================================================================
-
-# -*- coding: utf-8 -*-
-"""
-Intrusion Detection System - Corrected & Production Ready
-Compatible with latest pandas & sklearn
-"""
-
-import os
-import time
-import joblib
-from skops.io import dump
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# =========================
-# FILE PATHS
-# =========================
-DATA_PATH = "data/kddcup.data_10_percent.gz"
-NAMES_PATH = "data/kddcup.names"
-ATTACK_PATH = "data/training_attack_types"
-
-# =========================
-# LOAD FEATURE NAMES
-# =========================
-with open(NAMES_PATH, "r") as f:
-    print(f.read())
-
-cols = """duration,protocol_type,service,flag,src_bytes,dst_bytes,land,
-wrong_fragment,urgent,hot,num_failed_logins,logged_in,num_compromised,
-root_shell,su_attempted,num_root,num_file_creations,num_shells,
-num_access_files,num_outbound_cmds,is_host_login,is_guest_login,count,
-srv_count,serror_rate,srv_serror_rate,rerror_rate,srv_rerror_rate,
-same_srv_rate,diff_srv_rate,srv_diff_host_rate,dst_host_count,
-dst_host_srv_count,dst_host_same_srv_rate,dst_host_diff_srv_rate,
-dst_host_same_src_port_rate,dst_host_srv_diff_host_rate,
-dst_host_serror_rate,dst_host_srv_serror_rate,dst_host_rerror_rate,
-dst_host_srv_rerror_rate"""
-
-columns = [c.strip() for c in cols.split(",")]
-columns.append("target")
-
-print("Total columns:", len(columns))
-
-# =========================
-# ATTACK MAPPING
-# =========================
-with open(ATTACK_PATH, "r") as f:
-    print(f.read())
-
-attack_map = {
-    "normal": "normal",
-    "back": "dos", "land": "dos", "neptune": "dos", "pod": "dos",
-    "smurf": "dos", "teardrop": "dos",
-    "ipsweep": "probe", "nmap": "probe", "portsweep": "probe", "satan": "probe",
-    "ftp_write": "r2l", "guess_passwd": "r2l", "imap": "r2l",
-    "multihop": "r2l", "phf": "r2l", "spy": "r2l",
-    "warezclient": "r2l", "warezmaster": "r2l",
-    "buffer_overflow": "u2r", "loadmodule": "u2r",
-    "perl": "u2r", "rootkit": "u2r"
-}
-
-# =========================
-# LOAD DATASET (GZIP SAFE)
-# =========================
-df = pd.read_csv(
-    DATA_PATH,
-    names=columns,
-    compression="gzip",
-    header=None
-)
-
-print("Dataset shape:", df.shape)
-
-# =========================
-# TARGET LABEL
-# =========================
-df["Attack Type"] = df["target"].apply(lambda x: attack_map[x.rstrip(".")])
-
-# =========================
-# CLEANING
-# =========================
-df = df.dropna(axis=1)
-df = df.loc[:, df.nunique() > 1]
-
-# =========================
-# CORRELATION (NUMERIC ONLY)
-# =========================
-numeric_df = df.select_dtypes(include=[np.number])
-corr = numeric_df.corr()
-
-plt.figure(figsize=(14, 10))
-sns.heatmap(corr, cmap="coolwarm")
-plt.title("Feature Correlation Heatmap")
-plt.show()
-
-# =========================
-# DROP HIGHLY CORRELATED FEATURES
-# =========================
-drop_cols = [
-    "num_root",
-    "srv_serror_rate",
-    "srv_rerror_rate",
-    "dst_host_srv_serror_rate",
-    "dst_host_serror_rate",
-    "dst_host_rerror_rate",
-    "dst_host_srv_rerror_rate",
-    "dst_host_same_srv_rate"
-]
-
-df.drop(columns=[c for c in drop_cols if c in df.columns], inplace=True)
-
-# =========================
-# ENCODING
-# =========================
-protocol_map = {"icmp": 0, "tcp": 1, "udp": 2}
-flag_map = {
-    "SF": 0, "S0": 1, "REJ": 2, "RSTR": 3, "RSTO": 4,
-    "SH": 5, "S1": 6, "S2": 7, "RSTOS0": 8, "S3": 9, "OTH": 10
-}
-
-df["protocol_type"] = df["protocol_type"].map(protocol_map)
-df["flag"] = df["flag"].map(flag_map)
-
-df.drop(columns=["service", "target"], inplace=True)
-
-# =========================
-# MODELING
-# =========================
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.ensemble import RandomForestClassifier
-
-X = df.drop("Attack Type", axis=1)
-y = df["Attack Type"]
-
-scaler = MinMaxScaler()
-X_scaled = scaler.fit_transform(X)
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X_scaled, y, test_size=0.33, random_state=42
-)
-
-model = RandomForestClassifier(n_estimators=30, random_state=42)
-
-start = time.time()
-model.fit(X_train, y_train)
-print("Training time:", time.time() - start)
-
-print("Train Accuracy:", model.score(X_train, y_train))
-print("Test Accuracy:", model.score(X_test, y_test))
-
-# =========================
-# SAVE MODEL
-# =========================
-os.makedirs("models", exist_ok=True)
-
-joblib.dump(model, "models/rf_model.pkl")
-joblib.dump(scaler, "models/scaler.pkl")
-
-os.makedirs("models", exist_ok=True)
-
-dump(model, "models/rf_model.skops")
-dump(scaler, "models/scaler.skops")
-
-print("✅ Model & Scaler saved using skops")
-
-print("✅ Model & Scaler saved successfully")
-
-
-
-================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\train_model.py
-================================================================================
-
-import pandas as pd
-import os
-import joblib
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-
-# Path handling
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_FILE = os.path.join(BASE_DIR, "data", "system_data_labeled.csv")
-
-# Load dataset
-df = pd.read_csv(DATA_FILE)
-
-# Features and target
-FEATURES = [
-    "cpu_usage",
-    "ram_usage",
-    "disk_usage",
-    "disk_read",
-    "disk_write",
-    "battery_percent",
-    "process_count",
-    "heavy_process_count"
-]
-
-X = df[FEATURES]
-y = df["label"]
-
-# Train-test split (stratified)
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y,
-    test_size=0.2,
-    random_state=42,
-    stratify=y
-)
-
-# Train Random Forest model
-model = RandomForestClassifier(
-    n_estimators=200,
-    max_depth=None,
-    random_state=42,
-    n_jobs=-1
-)
-
-model.fit(X_train, y_train)
-
-# Predictions
-y_pred = model.predict(X_test)
-
-# Evaluation
-accuracy = accuracy_score(y_test, y_pred)
-
-print("✅ Random Forest model trained successfully\n")
-print(f"🎯 Accuracy: {accuracy * 100:.2f}%\n")
-
-print("📊 Classification Report:")
-print(classification_report(y_test, y_pred))
-
-print("🧩 Confusion Matrix:")
-print(confusion_matrix(y_test, y_pred))
-
-
-
-MODEL_PATH = os.path.join(BASE_DIR, "models", "model.pkl")
-joblib.dump(model, MODEL_PATH)
-
-print(f"\n💾 Model saved successfully at: {MODEL_PATH}")
-
-
-================================================================================
-FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\ui_launcher.spec
-================================================================================
-
-# -*- mode: python ; coding: utf-8 -*-
-
-
-a = Analysis(
-    ['services\\ui_launcher.py'],
-    pathex=[],
-    binaries=[],
-    datas=[('utils', 'utils'), ('schema', 'schema')],
-    hiddenimports=[],
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
-    noarchive=False,
-    optimize=0,
-)
-pyz = PYZ(a.pure)
-
-exe = EXE(
-    pyz,
-    a.scripts,
-    [],
-    exclude_binaries=True,
-    name='ui_launcher',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-)
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='ui_launcher',
-)
 
 
 
@@ -1974,6 +1267,339 @@ FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\engine\__init__.py
 ================================================================================
 
 
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\models_training\ids.py
+================================================================================
+
+# -*- coding: utf-8 -*-
+"""
+Intrusion Detection System - Corrected & Production Ready
+Compatible with latest pandas & sklearn
+"""
+
+import os
+import time
+import joblib
+from skops.io import dump
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# =========================
+# FILE PATHS
+# =========================
+DATA_PATH = "data/kddcup.data_10_percent.gz"
+NAMES_PATH = "data/kddcup.names"
+ATTACK_PATH = "data/training_attack_types"
+
+# =========================
+# LOAD FEATURE NAMES
+# =========================
+with open(NAMES_PATH, "r") as f:
+    print(f.read())
+
+cols = """duration,protocol_type,service,flag,src_bytes,dst_bytes,land,
+wrong_fragment,urgent,hot,num_failed_logins,logged_in,num_compromised,
+root_shell,su_attempted,num_root,num_file_creations,num_shells,
+num_access_files,num_outbound_cmds,is_host_login,is_guest_login,count,
+srv_count,serror_rate,srv_serror_rate,rerror_rate,srv_rerror_rate,
+same_srv_rate,diff_srv_rate,srv_diff_host_rate,dst_host_count,
+dst_host_srv_count,dst_host_same_srv_rate,dst_host_diff_srv_rate,
+dst_host_same_src_port_rate,dst_host_srv_diff_host_rate,
+dst_host_serror_rate,dst_host_srv_serror_rate,dst_host_rerror_rate,
+dst_host_srv_rerror_rate"""
+
+columns = [c.strip() for c in cols.split(",")]
+columns.append("target")
+
+print("Total columns:", len(columns))
+
+# =========================
+# ATTACK MAPPING
+# =========================
+with open(ATTACK_PATH, "r") as f:
+    print(f.read())
+
+attack_map = {
+    "normal": "normal",
+    "back": "dos", "land": "dos", "neptune": "dos", "pod": "dos",
+    "smurf": "dos", "teardrop": "dos",
+    "ipsweep": "probe", "nmap": "probe", "portsweep": "probe", "satan": "probe",
+    "ftp_write": "r2l", "guess_passwd": "r2l", "imap": "r2l",
+    "multihop": "r2l", "phf": "r2l", "spy": "r2l",
+    "warezclient": "r2l", "warezmaster": "r2l",
+    "buffer_overflow": "u2r", "loadmodule": "u2r",
+    "perl": "u2r", "rootkit": "u2r"
+}
+
+# =========================
+# LOAD DATASET (GZIP SAFE)
+# =========================
+df = pd.read_csv(
+    DATA_PATH,
+    names=columns,
+    compression="gzip",
+    header=None
+)
+
+print("Dataset shape:", df.shape)
+
+# =========================
+# TARGET LABEL
+# =========================
+df["Attack Type"] = df["target"].apply(lambda x: attack_map[x.rstrip(".")])
+
+# =========================
+# CLEANING
+# =========================
+df = df.dropna(axis=1)
+df = df.loc[:, df.nunique() > 1]
+
+# =========================
+# CORRELATION (NUMERIC ONLY)
+# =========================
+numeric_df = df.select_dtypes(include=[np.number])
+corr = numeric_df.corr()
+
+plt.figure(figsize=(14, 10))
+sns.heatmap(corr, cmap="coolwarm")
+plt.title("Feature Correlation Heatmap")
+plt.show()
+
+# =========================
+# DROP HIGHLY CORRELATED FEATURES
+# =========================
+drop_cols = [
+    "num_root",
+    "srv_serror_rate",
+    "srv_rerror_rate",
+    "dst_host_srv_serror_rate",
+    "dst_host_serror_rate",
+    "dst_host_rerror_rate",
+    "dst_host_srv_rerror_rate",
+    "dst_host_same_srv_rate"
+]
+
+df.drop(columns=[c for c in drop_cols if c in df.columns], inplace=True)
+
+# =========================
+# ENCODING
+# =========================
+protocol_map = {"icmp": 0, "tcp": 1, "udp": 2}
+flag_map = {
+    "SF": 0, "S0": 1, "REJ": 2, "RSTR": 3, "RSTO": 4,
+    "SH": 5, "S1": 6, "S2": 7, "RSTOS0": 8, "S3": 9, "OTH": 10
+}
+
+df["protocol_type"] = df["protocol_type"].map(protocol_map)
+df["flag"] = df["flag"].map(flag_map)
+
+df.drop(columns=["service", "target"], inplace=True)
+
+# =========================
+# MODELING
+# =========================
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.ensemble import RandomForestClassifier
+
+X = df.drop("Attack Type", axis=1)
+y = df["Attack Type"]
+
+scaler = MinMaxScaler()
+X_scaled = scaler.fit_transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X_scaled, y, test_size=0.33, random_state=42
+)
+
+model = RandomForestClassifier(n_estimators=30, random_state=42)
+
+start = time.time()
+model.fit(X_train, y_train)
+print("Training time:", time.time() - start)
+
+print("Train Accuracy:", model.score(X_train, y_train))
+print("Test Accuracy:", model.score(X_test, y_test))
+
+# =========================
+# SAVE MODEL
+# =========================
+os.makedirs("models", exist_ok=True)
+
+joblib.dump(model, "models/rf_model.pkl")
+joblib.dump(scaler, "models/scaler.pkl")
+
+os.makedirs("models", exist_ok=True)
+
+dump(model, "models/rf_model.skops")
+dump(scaler, "models/scaler.skops")
+
+print("✅ Model & Scaler saved using skops")
+
+print("✅ Model & Scaler saved successfully")
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\models_training\retrain_model.py
+================================================================================
+
+# scripts/retrain_model.py
+
+import pandas as pd
+import joblib
+import os
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+# -------------------------------------------------
+# PATHS
+# -------------------------------------------------
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_PATH = os.path.join(BASE_DIR, "data", "system_data_labeled.csv")
+MODEL_PATH = os.path.join(BASE_DIR, "models", "model.pkl")
+BACKUP_MODEL_PATH = os.path.join(BASE_DIR, "models", "model_backup.pkl")
+
+# -------------------------------------------------
+# LOAD DATA
+# -------------------------------------------------
+print("📥 Loading latest dataset...")
+df = pd.read_csv(DATA_PATH)
+
+FEATURES = [
+    "cpu_usage",
+    "ram_usage",
+    "disk_usage",
+    "disk_read",
+    "disk_write",
+    "battery_percent",
+    "process_count",
+    "heavy_process_count"
+]
+
+TARGET = "label"
+
+X = df[FEATURES]
+y = df[TARGET]
+
+# -------------------------------------------------
+# TRAIN / TEST SPLIT
+# -------------------------------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# -------------------------------------------------
+# TRAIN MODEL
+# -------------------------------------------------
+print("🤖 Retraining model...")
+model = RandomForestClassifier(
+    n_estimators=200,
+    random_state=42,
+    n_jobs=-1
+)
+
+model.fit(X_train, y_train)
+
+# -------------------------------------------------
+# EVALUATION
+# -------------------------------------------------
+y_pred = model.predict(X_test)
+acc = accuracy_score(y_test, y_pred)
+
+print(f"🎯 New model accuracy: {acc * 100:.2f}%")
+
+# -------------------------------------------------
+# SAFE REPLACEMENT
+# -------------------------------------------------
+if acc >= 0.85:
+    if os.path.exists(MODEL_PATH):
+        os.replace(MODEL_PATH, BACKUP_MODEL_PATH)
+
+    joblib.dump(model, MODEL_PATH)
+    print("✅ Model updated successfully")
+else:
+    print("❌ Accuracy too low. Model not replaced.")
+
+
+
+================================================================================
+FILE PATH: D:\AI & ML PROJECTS\smart_laptop_analyzer\models_training\train_model.py
+================================================================================
+
+import pandas as pd
+import os
+import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
+# Path handling
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_FILE = os.path.join(BASE_DIR, "data", "system_data_labeled.csv")
+
+# Load dataset
+df = pd.read_csv(DATA_FILE)
+
+# Features and target
+FEATURES = [
+    "cpu_usage",
+    "ram_usage",
+    "disk_usage",
+    "disk_read",
+    "disk_write",
+    "battery_percent",
+    "process_count",
+    "heavy_process_count"
+]
+
+X = df[FEATURES]
+y = df["label"]
+
+# Train-test split (stratified)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
+
+# Train Random Forest model
+model = RandomForestClassifier(
+    n_estimators=200,
+    max_depth=None,
+    random_state=42,
+    n_jobs=-1
+)
+
+model.fit(X_train, y_train)
+
+# Predictions
+y_pred = model.predict(X_test)
+
+# Evaluation
+accuracy = accuracy_score(y_test, y_pred)
+
+print("✅ Random Forest model trained successfully\n")
+print(f"🎯 Accuracy: {accuracy * 100:.2f}%\n")
+
+print("📊 Classification Report:")
+print(classification_report(y_test, y_pred))
+
+print("🧩 Confusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+
+
+
+MODEL_PATH = os.path.join(BASE_DIR, "models", "model.pkl")
+joblib.dump(model, MODEL_PATH)
+
+print(f"\n💾 Model saved successfully at: {MODEL_PATH}")
 
 
 ================================================================================
