@@ -17,3 +17,18 @@ pyinstaller background_monitor.spec
 (Optional if you also build UI)
 
 pyinstaller ui_launcher.spec
+
+
+
+//before presentation
+# config/ids_config.py
+DEMO_MODE = True
+ENABLE_AUTO_BLOCK = True
+PACKET_THRESHOLD = 5
+
+
+
+//after presentation
+DEMO_MODE = False
+ENABLE_AUTO_BLOCK = False
+PACKET_THRESHOLD = 20
