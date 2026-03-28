@@ -21,7 +21,7 @@ st.sidebar.header("⚙️ Controls")
 
 active_tab = st.sidebar.radio(
     "Select Module",
-    ["💻 System Monitor", "🛡️ Intrusion Detection"]
+    ["💻 System Monitor", "🛡️ Intrusion Detection", "🤖 AI Assistant"]
 )
 
 # Default values
@@ -55,6 +55,8 @@ elif active_tab == "🛡️ Intrusion Detection":
 
     ids_reset = st.sidebar.button("🔄 Reset Monitoring")
 
+
+
 # -------------------------------------------------
 # MAIN CONTENT
 # -------------------------------------------------
@@ -68,3 +70,7 @@ elif active_tab == "🛡️ Intrusion Detection":
         refresh_interval=ids_refresh,
         reset_logs=ids_reset
     )
+
+elif active_tab == "🤖 AI Assistant":
+    from dashboard.chatbot.view import render_chatbot
+    render_chatbot()
