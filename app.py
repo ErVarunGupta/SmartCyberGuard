@@ -21,7 +21,12 @@ st.sidebar.header("⚙️ Controls")
 
 active_tab = st.sidebar.radio(
     "Select Module",
-    ["💻 System Monitor", "🛡️ Intrusion Detection", "🤖 AI Assistant"]
+    [
+        "💻 System Monitor",
+        "🛡️ Intrusion Detection",
+        "🧹 Smart File Cleaner",  
+        " 🤖 AI Assistant"
+    ]
 )
 
 # Default values
@@ -74,3 +79,8 @@ elif active_tab == "🛡️ Intrusion Detection":
 elif active_tab == "🤖 AI Assistant":
     from dashboard.chatbot.view import render_chatbot
     render_chatbot()
+
+
+elif active_tab == "🧹 Smart File Cleaner":
+    from dashboard.file_cleaner.view import render_file_cleaner
+    render_file_cleaner()
