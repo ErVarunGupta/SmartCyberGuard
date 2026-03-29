@@ -3,17 +3,21 @@ import joblib
 import pandas as pd
 import os
 import time
+import plotly.express as px
 
 from core.monitor import collect_system_metrics
 from core.predictor import predict_system_state
 from core.health import calculate_health_score
 from core.mitigation import get_auto_mitigation_suggestions
+from core.data_logger import log_system_data
+from core.data_fetcher import fetch_metrics
 
 from dashboard.components.metrics import render_metrics
 from dashboard.components.tables import get_top_heavy_processes, render_resource_table
 from dashboard.components.alerts import render_alerts
 from dashboard.components.sidebar import load_sidebar_settings
 from utils.logger import log_alert
+
 
 # -------------------------------------------------
 # PATHS
@@ -28,103 +32,157 @@ LABEL_MAP = {
     2: "🔴 Hang Risk"
 }
 
+
 # -------------------------------------------------
-# MAIN RENDER FUNCTION
+# MAIN FUNCTION
 # -------------------------------------------------
 def render_system_monitor(refresh_interval=5):
 
     st.header("💻 System Performance Monitor")
 
-    # Sidebar settings (already loaded once)
     settings = load_sidebar_settings(SETTINGS_PATH)
 
-    # Load ML model once
+    # Load ML model
     model = None
     try:
         model = joblib.load(MODEL_PATH)
     except:
         st.warning("⚠️ ML model not available, using rule-based prediction")
 
-    # 🔥 IMPORTANT: PLACEHOLDER (NO FLICKER)
-    placeholder = st.empty()
+    # -------------------------------
+    # ⏱️ DATA UPDATE (NO BLOCKING)
+    # -------------------------------
+    if "last_refresh" not in st.session_state:
+        st.session_state.last_refresh = 0
 
-    # -------------------------------------------------
-    # LOOP (CONTROLLED REFRESH)
-    # -------------------------------------------------
-    while True:
-        with placeholder.container():
+    if "cached_metrics" not in st.session_state:
+        st.session_state.cached_metrics = None
 
-            # 1️⃣ Collect metrics
-            metrics = collect_system_metrics()
+    # Update data every refresh_interval
+    if time.time() - st.session_state.last_refresh > refresh_interval:
 
-            cpu = metrics["cpu"]
-            ram = metrics["ram"]
-            disk = metrics["disk"]
-            battery = metrics["battery"]
-            process_count = metrics["process_count"]
+        metrics = collect_system_metrics()
+        st.session_state.cached_metrics = metrics
 
-            # 2️⃣ Heavy processes (ONLY ONCE)
-            heavy_df = get_top_heavy_processes()
-            heavy_process_count = len(heavy_df)
+        # ✅ Log data for analytics
+        log_system_data()
 
-            # 3️⃣ Feature vector
-            features = pd.DataFrame([{
-                "cpu_usage": cpu,
-                "ram_usage": ram,
-                "disk_usage": disk,
-                "disk_read": metrics["disk_read"],
-                "disk_write": metrics["disk_write"],
-                "battery_percent": battery,
-                "process_count": process_count,
-                "heavy_process_count": heavy_process_count
-            }])
+        st.session_state.last_refresh = time.time()
 
-            # 4️⃣ Prediction
-            pred, ml_available = predict_system_state(model, features)
-            state = LABEL_MAP[pred]
+    # -------------------------------
+    # 🎯 ALWAYS RENDER UI
+    # -------------------------------
+    metrics = st.session_state.cached_metrics
 
-            # 5️⃣ Health score
-            health_score, health_label = calculate_health_score(
-                cpu, ram, disk, pred
-            )
+    if metrics is None:
+        st.warning("⏳ Collecting system data...")
+        return
 
-            # 6️⃣ UI METRICS
-            render_metrics(cpu, ram, disk, battery)
+    cpu = metrics["cpu"]
+    ram = metrics["ram"]
+    disk = metrics["disk"]
+    battery = metrics["battery"]
+    process_count = metrics["process_count"]
 
-            st.markdown(f"### Current State: **{state}**")
-            st.markdown(
-                f"""
-                ### 🧠 System Health Score  
-                **{health_score}/100 — {health_label}**
-                """
-            )
+    # -------------------------------
+    # 🔥 HEAVY PROCESSES
+    # -------------------------------
+    heavy_df = get_top_heavy_processes()
+    heavy_process_count = len(heavy_df)
 
-            # 7️⃣ Alerts
-            render_alerts(
-                pred=pred,
-                hang_alert_enabled=settings["hang_alert_enabled"],
-                alert_interval=settings["alert_interval"],
-                show_xai=False
-            )
+    # -------------------------------
+    # 🧠 FEATURE VECTOR
+    # -------------------------------
+    features = pd.DataFrame([{
+        "cpu_usage": cpu,
+        "ram_usage": ram,
+        "disk_usage": disk,
+        "disk_read": metrics["disk_read"],
+        "disk_write": metrics["disk_write"],
+        "battery_percent": battery,
+        "process_count": process_count,
+        "heavy_process_count": heavy_process_count
+    }])
 
-            # 8️⃣ Log alerts (background audit)
-            if pred == 2 and settings["hang_alert_enabled"]:
-                log_alert(
-                    alert_type="HANG_RISK",
-                    cpu=cpu,
-                    ram=ram,
-                    disk=disk,
-                    battery=battery,
-                    extra_info="ML" if ml_available else "RULE"
-                )
+    # -------------------------------
+    # 🤖 PREDICTION
+    # -------------------------------
+    pred, ml_available = predict_system_state(model, features)
+    state = LABEL_MAP[pred]
 
-            # 9️⃣ Recommendations
-            st.subheader("🛠️ Recommended Actions")
-            for s in get_auto_mitigation_suggestions(cpu, ram, disk, pred, battery):
-                st.write(f"• {s}")
+    # -------------------------------
+    # 🧠 HEALTH SCORE
+    # -------------------------------
+    health_score, health_label = calculate_health_score(cpu, ram, disk, pred)
 
-            # 🔟 Resource table (ONLY ONE)
-            render_resource_table(heavy_df)
+    # -------------------------------
+    # 📊 UI METRICS
+    # -------------------------------
+    render_metrics(cpu, ram, disk, battery)
 
-        # ⏱️ CONTROLLED REFRESH (NO PAGE RELOAD)
-        time.sleep(refresh_interval)
+    st.markdown(f"### Current State: **{state}**")
+
+    st.markdown(
+        f"""
+        ### 🧠 System Health Score  
+        **{health_score}/100 — {health_label}**
+        """
+    )
+
+    # -------------------------------
+    # 🚨 ALERTS
+    # -------------------------------
+    render_alerts(
+        pred=pred,
+        hang_alert_enabled=settings["hang_alert_enabled"],
+        alert_interval=settings["alert_interval"],
+        show_xai=False
+    )
+
+    # -------------------------------
+    # 📝 LOG ALERT
+    # -------------------------------
+    if pred == 2 and settings["hang_alert_enabled"]:
+        log_alert(
+            alert_type="HANG_RISK",
+            cpu=cpu,
+            ram=ram,
+            disk=disk,
+            battery=battery,
+            extra_info="ML" if ml_available else "RULE"
+        )
+
+    # -------------------------------
+    # 🛠️ RECOMMENDATIONS
+    # -------------------------------
+    st.subheader("🛠️ Recommended Actions")
+    for s in get_auto_mitigation_suggestions(cpu, ram, disk, pred, battery):
+        st.write(f"• {s}")
+
+    # -------------------------------
+    # 🔥 RESOURCE TABLE
+    # -------------------------------
+    render_resource_table(heavy_df)
+
+    # -------------------------------
+    # 📊 ANALYTICS DASHBOARD (FIXED)
+    # -------------------------------
+    st.subheader("📊 Analytics Dashboard")
+
+    df = fetch_metrics()
+
+    if df is not None and not df.empty:
+
+        df = df.sort_values("timestamp")
+
+        fig = px.line(
+            df,
+            x="timestamp",
+            y=["cpu", "ram", "disk"],
+            title="System Usage Over Time"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    else:
+        st.info("📊 No historical data yet. Please wait 10–20 seconds...")
