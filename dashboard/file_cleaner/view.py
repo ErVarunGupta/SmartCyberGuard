@@ -2,14 +2,16 @@ import streamlit as st
 import os
 import subprocess
 
-from dashboard.file_cleaner.file_cleaner import (
-    scan_files,
-    analyze_files,
-    get_safe_files,
-    delete_files,
-    format_size,
-    FOLDERS_TO_SCAN
-)
+# from dashboard.file_cleaner.file_cleaner import (
+#     scan_files,
+#     analyze_files,
+#     get_safe_files,
+#     delete_files,
+#     format_size,
+#     FOLDERS_TO_SCAN
+# )
+
+from features.cleaner.file_cleaner import *
 
 
 # -----------------------------

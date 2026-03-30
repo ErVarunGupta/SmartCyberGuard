@@ -1,7 +1,8 @@
 import psutil
 import time
 from google import genai
-from core.monitor import collect_system_metrics
+# from core.monitor import collect_system_metrics
+from core.system.monitor import *
 from config.api_keys import GEMINI_API_KEY
 
 # ✅ Initialize client

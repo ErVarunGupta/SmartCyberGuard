@@ -1,5 +1,5 @@
-from core.database import get_connection
-from core.system_info import collect_system_metrics
+from core.database.database import *
+from core.system.system_info import *
 
 def log_system_data():
     data = collect_system_metrics()

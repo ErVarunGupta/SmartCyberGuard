@@ -1,7 +1,7 @@
 from core.voice.input import listen
 from core.voice.output import speak
-from core.ai_assistant import get_ai_response
-from core.monitor import collect_system_metrics
+from services.ai.ai_assistant import *
+from core.system.monitor import *
 
 
 def fallback_response(cmd):

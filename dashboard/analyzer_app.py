@@ -16,7 +16,8 @@ if PROJECT_ROOT not in sys.path:
 # ===============================
 # PROJECT IMPORTS
 # ===============================
-from core.monitor import collect_system_metrics
+# from core.monitor import collect_system_metrics
+from core.system.monitor import *
 from core.ids.network_sniffer import start_sniffing
 from utils.logger import log_alert
 

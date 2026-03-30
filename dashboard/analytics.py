@@ -1,6 +1,7 @@
 import streamlit as st
 import plotly.express as px
-from core.data_fetcher import fetch_metrics
+# from core.data_fetcher import fetch_metrics
+from core.system.data_fetcher import *
 
 def show_analytics():
     st.subheader("📊 System Analytics")

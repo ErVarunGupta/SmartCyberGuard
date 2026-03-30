@@ -5,12 +5,18 @@ import os
 import time
 import plotly.express as px
 
-from core.monitor import collect_system_metrics
-from core.predictor import predict_system_state
-from core.health import calculate_health_score
-from core.mitigation import get_auto_mitigation_suggestions
+# from core.monitor import collect_system_metrics
+# from core.predictor import predict_system_state
+# from core.health import calculate_health_score
+# from core.mitigation import get_auto_mitigation_suggestions
+# from core.data_fetcher import fetch_metrics
 from core.data_logger import log_system_data
-from core.data_fetcher import fetch_metrics
+
+from core.system.monitor import *
+from services.ai.predictor import *
+from services.monitoring.health import *
+from services.monitoring.mitigation import *
+from core.system.data_fetcher import *
 
 from dashboard.components.metrics import render_metrics
 from dashboard.components.tables import get_top_heavy_processes, render_resource_table

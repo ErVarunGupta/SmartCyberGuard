@@ -1,5 +1,5 @@
 import streamlit as st
-from core.ai_assistant import get_ai_response
+from services.ai.ai_assistant import *
 from core.voice.input import listen
 from core.voice.output import speak
 

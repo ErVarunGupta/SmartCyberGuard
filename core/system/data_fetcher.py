@@ -1,4 +1,5 @@
-from core.database import get_connection
+# core/database.py
+from core.database.database import *
 import pandas as pd
 
 def fetch_metrics():
